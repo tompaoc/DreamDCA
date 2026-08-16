@@ -10,6 +10,14 @@ Guidance for Claude Code working in this repo.
 3. `docs/ASSET_SPEC.md` — frame sizes, animation FPS, naming, palette. Lock before commissioning art.
 4. `DECISIONS.md` — the §4 OPEN items, now resolved, plus anything decided since.
 
+## Live
+
+**https://tompaoc.github.io/DreamDCA/** — deployed from `main` via `.github/workflows/deploy.yml`
+(GitHub Pages, Actions build source). Repo: [tompaoc/DreamDCA](https://github.com/tompaoc/DreamDCA).
+Installable PWA (manifest + service worker via `vite-plugin-pwa`, `registerType: "prompt"` — see
+`src/pwa.ts` for why auto-update is wrong for this app). The service worker only ever caches the
+static app shell; the ledger lives in IndexedDB and is never touched by an app update.
+
 ## What this is
 
 A mobile-first web app where recording real crypto purchases grows a 16-bit pixel-art world.

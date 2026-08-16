@@ -69,13 +69,30 @@ Ledger layer, exercised against the running app:
 
 ---
 
+## Deployed — 2026-08-16
+
+Live at **https://tompaoc.github.io/DreamDCA/**. Repo: [tompaoc/DreamDCA](https://github.com/tompaoc/DreamDCA)
+(public), deployed via `.github/workflows/deploy.yml` on every push to `main`
+(`test:tz` → `validate_art.py` → build → GitHub Pages, using GitHub-hosted Pages'
+Actions build source rather than a `gh-pages` branch).
+
+- **Installable PWA**: manifest + service worker via `vite-plugin-pwa`. Icon set drawn procedurally
+  from the same 48-colour palette (`scripts/make_icons.py`) at integer multiples of a 32px master —
+  no anti-aliasing, so the home-screen icon is the same art language as the game.
+- **`registerType: "prompt"`, not `"autoUpdate"`.** A savings tracker must not swap its code out
+  from under someone mid-purchase-entry; a wooden banner offers the new build, nothing changes
+  until it is tapped. Verified live: rebuild → banner appears → tap → new code runs → a ledger
+  entry recorded *before* the update is still there after, because the ledger (IndexedDB) is never
+  part of the service worker's cache — only the static app shell is.
+- **Verified fully offline**: with the server stopped, a reload still rendered the whole app —
+  world, HUD, action bar and the ledger's own empty state — from cache + IndexedDB alone.
+
 ## Open
 
 - **Bitmap font** — no external face is chosen or licensed. The HUD currently uses an in-repo 5×7
   ASCII face (`src/game/font.ts`), which satisfies L10 and costs nothing; licensing a nicer face is
   still open.
-- **Not yet built from Phase 1**: animated water, chimney smoke, canopy sway, the idle NPC, and a
-  deployed URL + PWA manifest.
+- **Not yet built from Phase 1**: animated water, chimney smoke, canopy sway, the idle NPC.
 - Tile size 32 and internal resolution 360×640 are confirmed in code and in tests, but the sign-off
   checklist also asks for confirmation **on a real phone** via `prototypes/dreamdca-testbench.html`.
   The dev server binds to `0.0.0.0`, so it is reachable from a phone on the same network.
