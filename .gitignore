@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+Thumbs.db
+
+# build output — never hand-edited (AUDIT.md §8)
+public/assets/

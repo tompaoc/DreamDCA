@@ -1,0 +1,753 @@
+{
+  "source": [
+    "Binance_Other_Coins_Trade_Summary.pdf",
+    "Binance_ONDO_BIO_BTC_Trade_Summary.pdf"
+  ],
+  "period": "2023-12-31..2026-08-10 (UTC+10)",
+  "note": "Spot trades only. Not wallet balance.",
+  "coins": {
+    "BTC": {
+      "world": "BTC Homestead",
+      "netHoldings": 0.00013986,
+      "goal": 0.2,
+      "entries": [
+        {
+          "date": "2026-02-19",
+          "side": "BUY",
+          "price": 66700.0,
+          "qty": 0.00014,
+          "fiatUsd": 9.338,
+          "fiatCents": 934,
+          "fee": "0.00000014 BTC"
+        }
+      ]
+    },
+    "ONDO": {
+      "world": "Business City",
+      "netHoldings": 21953.4246,
+      "goal": 40000,
+      "entries": [
+        {
+          "date": "2025-06-23",
+          "side": "BUY",
+          "price": 0.6678,
+          "qty": 227.3,
+          "fiatUsd": 151.79094,
+          "fiatCents": 15179,
+          "fee": "0.2273 ONDO"
+        },
+        {
+          "date": "2025-10-14",
+          "side": "BUY",
+          "price": 0.755,
+          "qty": 379.7,
+          "fiatUsd": 286.6735,
+          "fiatCents": 28667,
+          "fee": "0.3797 ONDO"
+        },
+        {
+          "date": "2025-11-10",
+          "side": "BUY",
+          "price": 0.6881,
+          "qty": 395.0,
+          "fiatUsd": 271.7995,
+          "fiatCents": 27180,
+          "fee": "0.395 ONDO"
+        },
+        {
+          "date": "2025-11-20",
+          "side": "BUY",
+          "price": 0.544,
+          "qty": 300.0,
+          "fiatUsd": 163.2,
+          "fiatCents": 16320,
+          "fee": "0.3 ONDO"
+        },
+        {
+          "date": "2025-12-08",
+          "side": "BUY",
+          "price": 0.4671,
+          "qty": 111.8,
+          "fiatUsd": 52.22178,
+          "fiatCents": 5222,
+          "fee": "0.1118 ONDO"
+        },
+        {
+          "date": "2025-12-08",
+          "side": "BUY",
+          "price": 0.4671,
+          "qty": 88.2,
+          "fiatUsd": 41.19822,
+          "fiatCents": 4120,
+          "fee": "0.0882 ONDO"
+        },
+        {
+          "date": "2025-12-22",
+          "side": "BUY",
+          "price": 0.3976,
+          "qty": 523.3,
+          "fiatUsd": 208.06408,
+          "fiatCents": 20806,
+          "fee": "0.5233 ONDO"
+        },
+        {
+          "date": "2025-12-22",
+          "side": "BUY",
+          "price": 0.3976,
+          "qty": 39.9,
+          "fiatUsd": 15.86424,
+          "fiatCents": 1586,
+          "fee": "0.0399 ONDO"
+        },
+        {
+          "date": "2025-12-23",
+          "side": "BUY",
+          "price": 0.388,
+          "qty": 202.0,
+          "fiatUsd": 78.376,
+          "fiatCents": 7838,
+          "fee": "0.202 ONDO"
+        },
+        {
+          "date": "2025-12-23",
+          "side": "BUY",
+          "price": 0.388,
+          "qty": 831.5,
+          "fiatUsd": 322.622,
+          "fiatCents": 32262,
+          "fee": "0.8315 ONDO"
+        },
+        {
+          "date": "2026-01-05",
+          "side": "BUY",
+          "price": 0.4412,
+          "qty": 296.1,
+          "fiatUsd": 130.63932,
+          "fiatCents": 13064,
+          "fee": "0.2961 ONDO"
+        },
+        {
+          "date": "2026-01-05",
+          "side": "BUY",
+          "price": 0.4412,
+          "qty": 703.9,
+          "fiatUsd": 310.56068,
+          "fiatCents": 31056,
+          "fee": "0.7039 ONDO"
+        },
+        {
+          "date": "2026-01-06",
+          "side": "BUY",
+          "price": 0.4558,
+          "qty": 1000.0,
+          "fiatUsd": 455.8,
+          "fiatCents": 45580,
+          "fee": "1 ONDO"
+        },
+        {
+          "date": "2026-01-15",
+          "side": "BUY",
+          "price": 0.3901,
+          "qty": 20.1,
+          "fiatUsd": 7.84101,
+          "fiatCents": 784,
+          "fee": "0.0201 ONDO"
+        },
+        {
+          "date": "2026-01-15",
+          "side": "BUY",
+          "price": 0.3901,
+          "qty": 182.0,
+          "fiatUsd": 70.9982,
+          "fiatCents": 7100,
+          "fee": "0.182 ONDO"
+        },
+        {
+          "date": "2026-01-19",
+          "side": "BUY",
+          "price": 0.341,
+          "qty": 936.1,
+          "fiatUsd": 319.2101,
+          "fiatCents": 31921,
+          "fee": "0.9361 ONDO"
+        },
+        {
+          "date": "2026-01-20",
+          "side": "BUY",
+          "price": 0.3383,
+          "qty": 3093.0,
+          "fiatUsd": 1046.3619,
+          "fiatCents": 104636,
+          "fee": "3.093 ONDO"
+        },
+        {
+          "date": "2026-01-28",
+          "side": "BUY",
+          "price": 0.34,
+          "qty": 759.9,
+          "fiatUsd": 258.366,
+          "fiatCents": 25837,
+          "fee": "0.7599 ONDO"
+        },
+        {
+          "date": "2026-02-10",
+          "side": "BUY",
+          "price": 0.2471,
+          "qty": 1000.0,
+          "fiatUsd": 247.1,
+          "fiatCents": 24710,
+          "fee": "1 ONDO"
+        },
+        {
+          "date": "2026-02-19",
+          "side": "BUY",
+          "price": 0.2675,
+          "qty": 417.0,
+          "fiatUsd": 111.5475,
+          "fiatCents": 11155,
+          "fee": "0.417 ONDO"
+        },
+        {
+          "date": "2026-02-20",
+          "side": "BUY",
+          "price": 0.265,
+          "qty": 3887.8,
+          "fiatUsd": 1030.267,
+          "fiatCents": 103027,
+          "fee": "3.8878 ONDO"
+        },
+        {
+          "date": "2026-03-18",
+          "side": "BUY",
+          "price": 0.2738,
+          "qty": 3000.0,
+          "fiatUsd": 821.4,
+          "fiatCents": 82140,
+          "fee": "3 ONDO"
+        },
+        {
+          "date": "2026-06-04",
+          "side": "BUY",
+          "price": 0.3582,
+          "qty": 1612.2,
+          "fiatUsd": 577.49004,
+          "fiatCents": 57749,
+          "fee": "1.6122 ONDO"
+        },
+        {
+          "date": "2026-06-11",
+          "side": "BUY",
+          "price": 0.3452,
+          "qty": 588.3,
+          "fiatUsd": 203.08116,
+          "fiatCents": 20308,
+          "fee": "0.5883 ONDO"
+        },
+        {
+          "date": "2026-06-11",
+          "side": "BUY",
+          "price": 0.3452,
+          "qty": 575.3,
+          "fiatUsd": 198.59356,
+          "fiatCents": 19859,
+          "fee": "0.5753 ONDO"
+        },
+        {
+          "date": "2026-08-07",
+          "side": "BUY",
+          "price": 0.3531,
+          "qty": 805.0,
+          "fiatUsd": 284.2455,
+          "fiatCents": 28425,
+          "fee": "0.805 ONDO"
+        }
+      ]
+    },
+    "BIO": {
+      "world": "Research Laboratory",
+      "netHoldings": 153764.5785,
+      "goal": 200000,
+      "entries": [
+        {
+          "date": "2025-04-30",
+          "side": "BUY",
+          "price": 0.073,
+          "qty": 905.9,
+          "fiatUsd": 66.1307,
+          "fiatCents": 6613,
+          "fee": "0.9059 BIO"
+        },
+        {
+          "date": "2025-04-30",
+          "side": "BUY",
+          "price": 0.073,
+          "qty": 9094.1,
+          "fiatUsd": 663.8693,
+          "fiatCents": 66387,
+          "fee": "9.0941 BIO"
+        },
+        {
+          "date": "2025-06-25",
+          "side": "BUY",
+          "price": 0.0508,
+          "qty": 15022.4,
+          "fiatUsd": 763.13792,
+          "fiatCents": 76314,
+          "fee": "15.0224 BIO"
+        },
+        {
+          "date": "2025-07-08",
+          "side": "BUY",
+          "price": 0.049,
+          "qty": 459.4,
+          "fiatUsd": 22.5106,
+          "fiatCents": 2251,
+          "fee": "0.4594 BIO"
+        },
+        {
+          "date": "2025-08-20",
+          "side": "SELL",
+          "price": 0.13,
+          "qty": 12818.7,
+          "fiatUsd": 1666.431,
+          "fiatCents": 166643,
+          "fee": "1.666431 USDT"
+        },
+        {
+          "date": "2025-08-25",
+          "side": "SELL",
+          "price": 0.2307,
+          "qty": 2687.4,
+          "fiatUsd": 619.98318,
+          "fiatCents": 61998,
+          "fee": "0.61998318 USDT"
+        },
+        {
+          "date": "2025-11-10",
+          "side": "BUY",
+          "price": 0.0828,
+          "qty": 4625.0,
+          "fiatUsd": 382.95,
+          "fiatCents": 38295,
+          "fee": "4.625 BIO"
+        },
+        {
+          "date": "2025-11-20",
+          "side": "BUY",
+          "price": 0.069,
+          "qty": 2509.4,
+          "fiatUsd": 173.1486,
+          "fiatCents": 17315,
+          "fee": "2.5094 BIO"
+        },
+        {
+          "date": "2025-12-08",
+          "side": "BUY",
+          "price": 0.0481,
+          "qty": 7588.2,
+          "fiatUsd": 364.99242,
+          "fiatCents": 36499,
+          "fee": "7.5882 BIO"
+        },
+        {
+          "date": "2025-12-09",
+          "side": "BUY",
+          "price": 0.0481,
+          "qty": 4800.0,
+          "fiatUsd": 230.88,
+          "fiatCents": 23088,
+          "fee": "4.8 BIO"
+        },
+        {
+          "date": "2025-12-23",
+          "side": "BUY",
+          "price": 0.042,
+          "qty": 9523.8,
+          "fiatUsd": 399.9996,
+          "fiatCents": 40000,
+          "fee": "9.5238 BIO"
+        },
+        {
+          "date": "2026-01-01",
+          "side": "BUY",
+          "price": 0.0438,
+          "qty": 356.0,
+          "fiatUsd": 15.5928,
+          "fiatCents": 1559,
+          "fee": "0.356 BIO"
+        },
+        {
+          "date": "2026-03-04",
+          "side": "BUY",
+          "price": 0.0208,
+          "qty": 4086.5,
+          "fiatUsd": 84.9992,
+          "fiatCents": 8500,
+          "fee": "4.0865 BIO"
+        },
+        {
+          "date": "2026-03-18",
+          "side": "BUY",
+          "price": 0.0225,
+          "qty": 17921.9,
+          "fiatUsd": 403.24275,
+          "fiatCents": 40324,
+          "fee": "17.9219 BIO"
+        },
+        {
+          "date": "2026-05-25",
+          "side": "BUY",
+          "price": 0.0353,
+          "qty": 1811.4,
+          "fiatUsd": 63.94242,
+          "fiatCents": 6394,
+          "fee": "1.8114 BIO"
+        },
+        {
+          "date": "2026-06-04",
+          "side": "BUY",
+          "price": 0.0311,
+          "qty": 321.6,
+          "fiatUsd": 10.00176,
+          "fiatCents": 1000,
+          "fee": "0.3216 BIO"
+        },
+        {
+          "date": "2026-06-10",
+          "side": "BUY",
+          "price": 0.03049,
+          "qty": 7915.6,
+          "fiatUsd": 241.346644,
+          "fiatCents": 24135,
+          "fee": "7.9156 BIO"
+        },
+        {
+          "date": "2026-06-11",
+          "side": "BUY",
+          "price": 0.03068,
+          "qty": 7238.4,
+          "fiatUsd": 222.074112,
+          "fiatCents": 22207,
+          "fee": "7.2384 BIO"
+        },
+        {
+          "date": "2026-06-15",
+          "side": "BUY",
+          "price": 0.03259,
+          "qty": 3657.2,
+          "fiatUsd": 119.188148,
+          "fiatCents": 11919,
+          "fee": "3.6572 BIO"
+        },
+        {
+          "date": "2026-06-16",
+          "side": "BUY",
+          "price": 0.03112,
+          "qty": 11506.2,
+          "fiatUsd": 358.072944,
+          "fiatCents": 35807,
+          "fee": "11.5062 BIO"
+        },
+        {
+          "date": "2026-06-20",
+          "side": "BUY",
+          "price": 0.03225,
+          "qty": 2964.8,
+          "fiatUsd": 95.6148,
+          "fiatCents": 9561,
+          "fee": "0.00012211 BNB"
+        },
+        {
+          "date": "2026-06-21",
+          "side": "BUY",
+          "price": 0.03197,
+          "qty": 689.9,
+          "fiatUsd": 22.056103,
+          "fiatCents": 2206,
+          "fee": "0.00002802 BNB"
+        },
+        {
+          "date": "2026-06-22",
+          "side": "BUY",
+          "price": 0.03126,
+          "qty": 15301.3,
+          "fiatUsd": 478.318638,
+          "fiatCents": 47832,
+          "fee": "15.3013 BIO"
+        },
+        {
+          "date": "2026-07-02",
+          "side": "BUY",
+          "price": 0.0296,
+          "qty": 4184.9,
+          "fiatUsd": 123.87304,
+          "fiatCents": 12387,
+          "fee": "3.825 BIO + 0.00001441 BNB"
+        },
+        {
+          "date": "2026-07-02",
+          "side": "BUY",
+          "price": 0.0296,
+          "qty": 7169.2,
+          "fiatUsd": 212.20832,
+          "fiatCents": 21221,
+          "fee": "7.1692 BIO"
+        },
+        {
+          "date": "2026-07-21",
+          "side": "BUY",
+          "price": 0.02598,
+          "qty": 29783.0,
+          "fiatUsd": 773.76234,
+          "fiatCents": 77376,
+          "fee": "29.783 BIO"
+        }
+      ]
+    },
+    "SOL": {
+      "world": "Technology City",
+      "netHoldings": 15.083901,
+      "goal": 40,
+      "entries": [
+        {
+          "date": "2026-01-01",
+          "side": "BUY",
+          "price": 125.0,
+          "qty": 1.0,
+          "fiatUsd": 125.0,
+          "fiatCents": 12500,
+          "fee": "0.001 SOL"
+        },
+        {
+          "date": "2026-01-05",
+          "side": "BUY",
+          "price": 135.7,
+          "qty": 1.02,
+          "fiatUsd": 138.41,
+          "fiatCents": 13841,
+          "fee": "0.00102 SOL"
+        },
+        {
+          "date": "2026-01-06",
+          "side": "BUY",
+          "price": 138.99,
+          "qty": 2.462,
+          "fiatUsd": 342.19,
+          "fiatCents": 34219,
+          "fee": "0.002462 SOL"
+        },
+        {
+          "date": "2026-02-01",
+          "side": "BUY",
+          "price": 114.21,
+          "qty": 3.141,
+          "fiatUsd": 358.73,
+          "fiatCents": 35873,
+          "fee": "0.003141 SOL"
+        },
+        {
+          "date": "2026-02-02",
+          "side": "BUY",
+          "price": 99.05,
+          "qty": 2.226,
+          "fiatUsd": 220.49,
+          "fiatCents": 22049,
+          "fee": "0.002226 SOL"
+        },
+        {
+          "date": "2026-02-04",
+          "side": "BUY",
+          "price": 97.03,
+          "qty": 0.15,
+          "fiatUsd": 14.55,
+          "fiatCents": 1455,
+          "fee": "0.00015 SOL"
+        },
+        {
+          "date": "2026-02-10",
+          "side": "BUY",
+          "price": 84.85,
+          "qty": 1.0,
+          "fiatUsd": 84.85,
+          "fiatCents": 8485,
+          "fee": "0.001 SOL"
+        },
+        {
+          "date": "2026-06-11",
+          "side": "BUY",
+          "price": 65.46,
+          "qty": 1.0,
+          "fiatUsd": 65.46,
+          "fiatCents": 6546,
+          "fee": "0.001 SOL"
+        },
+        {
+          "date": "2026-08-07",
+          "side": "BUY",
+          "price": 73.56,
+          "qty": 3.1,
+          "fiatUsd": 228.04,
+          "fiatCents": 22804,
+          "fee": "0.0031 SOL"
+        }
+      ]
+    },
+    "LINK": {
+      "world": "Network / Infrastructure",
+      "netHoldings": 50.42952,
+      "goal": 500,
+      "entries": [
+        {
+          "date": "2025-10-14",
+          "side": "BUY",
+          "price": 18.53,
+          "qty": 10.0,
+          "fiatUsd": 185.3,
+          "fiatCents": 18530,
+          "fee": "0.01 LINK"
+        },
+        {
+          "date": "2025-11-20",
+          "side": "BUY",
+          "price": 13.74,
+          "qty": 10.0,
+          "fiatUsd": 137.4,
+          "fiatCents": 13740,
+          "fee": "0.01 LINK"
+        },
+        {
+          "date": "2026-01-01",
+          "side": "BUY",
+          "price": 12.24,
+          "qty": 2.45,
+          "fiatUsd": 29.99,
+          "fiatCents": 2999,
+          "fee": "0.00245 LINK"
+        },
+        {
+          "date": "2026-01-05",
+          "side": "BUY",
+          "price": 13.6,
+          "qty": 13.03,
+          "fiatUsd": 177.21,
+          "fiatCents": 17721,
+          "fee": "0.01303 LINK"
+        },
+        {
+          "date": "2026-02-10",
+          "side": "BUY",
+          "price": 8.59,
+          "qty": 15.0,
+          "fiatUsd": 128.85,
+          "fiatCents": 12885,
+          "fee": "0.015 LINK"
+        }
+      ]
+    },
+    "RENDER": {
+      "world": "ยังไม่มีโลก",
+      "netHoldings": 180.8971,
+      "goal": null,
+      "entries": [
+        {
+          "date": "2024-10-23",
+          "side": "BUY",
+          "price": 5.136,
+          "qty": 19.46,
+          "fiatUsd": 99.95,
+          "fiatCents": 9995,
+          "fee": "0.01946 RENDER"
+        },
+        {
+          "date": "2024-11-08",
+          "side": "BUY",
+          "price": 4.952,
+          "qty": 94.58,
+          "fiatUsd": 468.36,
+          "fiatCents": 46836,
+          "fee": "0.09458 RENDER"
+        },
+        {
+          "date": "2024-12-12",
+          "side": "SELL",
+          "price": 9.635,
+          "qty": 113.94,
+          "fiatUsd": 1097.81,
+          "fiatCents": 109781,
+          "fee": "1.097812 USDT"
+        },
+        {
+          "date": "2025-10-14",
+          "side": "BUY",
+          "price": 2.743,
+          "qty": 20.0,
+          "fiatUsd": 54.86,
+          "fiatCents": 5486,
+          "fee": "0.02 RENDER"
+        },
+        {
+          "date": "2025-11-20",
+          "side": "BUY",
+          "price": 2.085,
+          "qty": 30.0,
+          "fiatUsd": 62.55,
+          "fiatCents": 6255,
+          "fee": "0.03 RENDER"
+        },
+        {
+          "date": "2026-01-31",
+          "side": "BUY",
+          "price": 1.596,
+          "qty": 22.94,
+          "fiatUsd": 36.61,
+          "fiatCents": 3661,
+          "fee": "0.02294 RENDER"
+        },
+        {
+          "date": "2026-02-03",
+          "side": "BUY",
+          "price": 1.577,
+          "qty": 231.52,
+          "fiatUsd": 365.11,
+          "fiatCents": 36511,
+          "fee": "0.23152 RENDER"
+        },
+        {
+          "date": "2026-04-26",
+          "side": "SELL",
+          "price": 1.825,
+          "qty": 304.37,
+          "fiatUsd": 555.48,
+          "fiatCents": 55548,
+          "fee": "0.555475 USDT"
+        },
+        {
+          "date": "2026-08-07",
+          "side": "BUY",
+          "price": 1.334,
+          "qty": 181.28,
+          "fiatUsd": 241.83,
+          "fiatCents": 24183,
+          "fee": "0.0000455 BNB + 0.15438 RENDER"
+        }
+      ]
+    }
+  },
+  "missing": {
+    "AAVE": {
+      "goal": 30,
+      "world": "Lending Castle",
+      "reason": "ไม่พบใน Spot Trade History ทั้งสองไฟล์"
+    },
+    "PENDLE": {
+      "goal": 1000,
+      "world": "Time / Harvest World",
+      "reason": "ไม่พบใน Spot Trade History ทั้งสองไฟล์"
+    },
+    "CC / Canton": {
+      "goal": 10000,
+      "world": "Financial Network City",
+      "reason": "ไม่พบใน Spot Trade History ทั้งสองไฟล์"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "note": "Milestones and stages are DATA, not code (L5 / AUDIT §6). Tune thresholds here; never branch on them in a scene.",
+  "stages": [
+    {
+      "stage": 0,
+      "label": "ที่ดินเปล่า",
+      "home": "prop_tent",
+      "requires": {}
+    },
+    {
+      "stage": 1,
+      "label": "บ้านเล็ก",
+      "home": "prop_cottage_lv1",
+      "requires": { "daysRecorded": 1 }
+    },
+    {
+      "stage": 2,
+      "label": "บ้านใหญ่",
+      "home": "prop_cottage_lv2",
+      "requires": { "daysRecorded": 14 }
+    },
+    {
+      "stage": 3,
+      "label": "คฤหาสน์",
+      "home": "prop_cottage_lv3",
+      "requires": { "daysRecorded": 60 }
+    },
+    {
+      "stage": 4,
+      "label": "Bitcoin Citadel",
+      "home": "prop_cottage_lv4",
+      "requires": { "sats": 2000000 }
+    }
+  ],
+  "milestones": [
+    {
+      "id": "first_light",
+      "label": "จุดไฟดวงแรก — บันทึกครั้งแรกของคุณ",
+      "requires": { "daysRecorded": 1 },
+      "grants": ["prop.sign_path", "prop.lantern"]
+    },
+    {
+      "id": "steady_3",
+      "label": "สามวันติด — เริ่มเป็นนิสัยแล้ว",
+      "requires": { "streak": 3 },
+      "grants": ["prop.fence_0", "prop.fence_1", "prop.fence_2"]
+    },
+    {
+      "id": "steady_7",
+      "label": "เจ็ดวันติด — ไก่มาอยู่ด้วยแล้ว",
+      "requires": { "streak": 7 },
+      "grants": ["entity.chicken"]
+    },
+    {
+      "id": "rooted_30",
+      "label": "บันทึกครบ 30 วัน — มีเพื่อนสี่ขามาเฝ้าบ้าน",
+      "requires": { "daysRecorded": 30 },
+      "grants": ["entity.dog"]
+    },
+    {
+      "id": "first_stack",
+      "label": "สะสมครบ 0.01 BTC — ห้องนิรภัยหลังแรก",
+      "requires": { "sats": 1000000 },
+      "grants": ["prop.vault"]
+    }
+  ]
+}

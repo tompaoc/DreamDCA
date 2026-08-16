@@ -1,0 +1,484 @@
+/* No border-radius, no box-shadow, no rgba translucency, no blur.
+   ASSET_SPEC §7 — those four are what make pixel UI read as a dashboard.
+
+   Palette tokens are the same 48 colours the art uses (art/dreamdca-48.gpl),
+   so the HTML layer and the canvas cannot drift apart. */
+
+:root {
+  --ink-0: #140f14;
+  --ink-1: #241a21;
+  --ink-2: #3a2b33;
+  --wood-0: #3b2109;
+  --wood-1: #5b3311;
+  --wood-2: #7e4a1b;
+  --wood-3: #a3682b;
+  --wood-4: #c68f45;
+  --gold-3: #f5c13c;
+  --gold-4: #ffe79a;
+  --grass-2: #57913a;
+  --grass-4: #9ccb63;
+  --accent-1: #c4383f;
+  --stone-3: #9a96a0;
+
+  --font-th:
+    "Noto Sans Thai", "Leelawadee UI", "Sarabun", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink-0);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  font-family: var(--font-th);
+  color: var(--gold-4);
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  background: var(--ink-0);
+}
+
+/* Shown while the Phaser chunk loads. Palette ink, so there is no white flash. */
+.boot {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-0);
+}
+
+.world-host {
+  position: absolute;
+  inset: 0;
+  line-height: 0;
+}
+
+/* The canvas backing store stays at the internal resolution; the CSS transform
+   in scale.ts supplies an integer magnification. Never let the browser resample. */
+.world-host canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+/* ── bottom chrome ───────────────────────────────────────────────────────── */
+
+.stage-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 12px;
+  background: var(--wood-1);
+  border-top: 2px solid var(--wood-3);
+  border-bottom: 2px solid var(--wood-0);
+  color: var(--gold-4);
+  font-size: 13px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.action-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  background: var(--wood-2);
+  border-top: 3px solid var(--wood-4);
+}
+
+/* Touch targets are 44px minimum — pixel aesthetics do not exempt thumbs. */
+.ab {
+  min-height: 44px;
+  border: 0;
+  border-right: 2px solid var(--wood-0);
+  background: var(--wood-2);
+  color: var(--gold-4);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ab:last-child {
+  border-right: 0;
+}
+
+.ab-main {
+  background: var(--wood-3);
+  color: var(--ink-0);
+  font-weight: 700;
+}
+
+.ab:active {
+  background: var(--wood-1);
+  padding: 1px 0 0 1px;
+}
+
+.ab:disabled {
+  opacity: 0.5;
+}
+
+/* ── sheets: an in-world ledger book, not a modal card ───────────────────── */
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-0);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink-1);
+  border: 4px solid var(--wood-2);
+  border-top-color: var(--wood-4);
+  border-left-color: var(--wood-4);
+  border-bottom-color: var(--wood-0);
+  border-right-color: var(--wood-0);
+  touch-action: auto;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--wood-1);
+  border-bottom: 2px solid var(--wood-0);
+}
+
+.sheet-head h2 {
+  font-size: 15px;
+  color: var(--gold-4);
+  font-weight: 700;
+}
+
+.sheet-body {
+  padding: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  color: var(--stone-3);
+  font-size: 14px;
+}
+
+.sheet-foot {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--ink-2);
+  border-top: 2px solid var(--wood-0);
+}
+
+.sheet-foot .btn {
+  flex: 1;
+}
+
+.sheet-unlock {
+  align-self: center;
+  margin: auto;
+}
+
+/* ── controls: 2px bevel, inverted on press ──────────────────────────────── */
+
+.btn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-top: 2px solid var(--wood-4);
+  border-left: 2px solid var(--wood-4);
+  border-bottom: 2px solid var(--wood-0);
+  border-right: 2px solid var(--wood-0);
+  background: var(--wood-2);
+  color: var(--gold-4);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn:active {
+  border-top-color: var(--wood-0);
+  border-left-color: var(--wood-0);
+  border-bottom-color: var(--wood-4);
+  border-right-color: var(--wood-4);
+  padding: 1px 13px 0 15px;
+}
+
+.btn-primary {
+  background: var(--grass-2);
+  color: var(--ink-0);
+  font-weight: 700;
+  border-top-color: var(--grass-4);
+  border-left-color: var(--grass-4);
+}
+
+.btn-danger {
+  background: var(--accent-1);
+  color: var(--gold-4);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 0;
+  min-height: 32px;
+  padding: 0 6px;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.field span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--wood-4);
+}
+
+.field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  background: var(--ink-0);
+  color: var(--gold-4);
+  border: 2px solid var(--wood-1);
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS zooming the viewport on focus */
+}
+
+.field input:focus {
+  outline: 0;
+  border-color: var(--gold-3);
+}
+
+.readout {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--ink-0);
+  border: 2px solid var(--wood-1);
+}
+
+.readout span {
+  font-size: 12px;
+  color: var(--wood-4);
+}
+
+.readout b {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 16px;
+  color: var(--grass-4);
+}
+
+.readout small {
+  margin-left: auto;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+  color: var(--stone-3);
+}
+
+.error {
+  padding: 8px 10px;
+  background: var(--accent-1);
+  color: var(--gold-4);
+  font-size: 13px;
+}
+
+.ok {
+  padding: 8px 10px;
+  background: var(--grass-2);
+  color: var(--ink-0);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--stone-3);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.rule {
+  border: 0;
+  border-top: 2px solid var(--wood-1);
+  margin: 14px 0;
+}
+
+.radio-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--wood-4);
+}
+
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+/* ── calendar ────────────────────────────────────────────────────────────── */
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal-nav b {
+  color: var(--gold-4);
+  font-size: 15px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-head {
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--wood-4);
+  text-align: center;
+}
+
+.cal-cell {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 38px;
+  border: 2px solid var(--ink-2);
+  background: var(--ink-0);
+  color: var(--stone-3);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cal-pad {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+.cal-cell.has {
+  background: var(--wood-1);
+  color: var(--gold-4);
+}
+
+.cal-cell.today {
+  border-color: var(--gold-3);
+}
+
+.cal-cell.sel {
+  border-color: var(--grass-4);
+}
+
+.cal-cell .dot {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--grass-4);
+}
+
+.cal-detail {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 2px solid var(--wood-1);
+}
+
+.cal-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal-detail-head b {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: var(--gold-4);
+}
+
+.entry-list {
+  list-style: none;
+}
+
+.entry-list button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 2px solid var(--ink-2);
+  background: var(--ink-0);
+  color: var(--stone-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entry-list b {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: var(--grass-4);
+  font-size: 13px;
+}
+
+.entry-list small {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.unlock-list {
+  list-style: none;
+}
+
+.unlock-list li {
+  padding: 10px;
+  margin-bottom: 6px;
+  background: var(--wood-1);
+  border-left: 4px solid var(--gold-3);
+  color: var(--gold-4);
+  font-size: 13.5px;
+}

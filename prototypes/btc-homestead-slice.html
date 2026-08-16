@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Dream DCA — BTC Homestead (Phase 1 slice)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0b0a0c;overflow:hidden;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e8e4ec;
+  overscroll-behavior:none;touch-action:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;background:#000}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;transform-origin:top left}
+
+/* ── HTML layer: forms & sheets. This is the whole architectural argument. ── */
+#sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;
+  background:#1b1410;border-top:3px solid #C68F45;transform:translateY(110%);
+  transition:transform .22s cubic-bezier(.2,.8,.2,1);z-index:20;padding:14px 14px 22px;
+  touch-action:auto}
+#sheet.open{transform:translateY(0)}
+#sheet h2{font-size:15px;color:#F5C13C;letter-spacing:.04em;margin-bottom:2px}
+#sheet p.hint{font-size:11.5px;color:#9A96A0;margin-bottom:12px}
+label{display:block;font-size:11px;color:#C08F51;text-transform:uppercase;
+  letter-spacing:.08em;margin:10px 0 4px}
+input{width:100%;font:16px/1.2 inherit;padding:11px 12px;background:#0f0b09;color:#FFE79A;
+  border:2px solid #5B3311;border-radius:0;outline:none}
+input:focus{border-color:#C68F45}
+.calc{margin-top:12px;padding:10px 12px;background:#0f0b09;border-left:3px solid #77B24A;
+  font-size:12.5px;color:#9CCB63;line-height:1.7}
+.btnrow{display:flex;gap:8px;margin-top:14px}
+button.act{flex:1;font:600 14px inherit;padding:13px;background:#7E4A1B;color:#FFE79A;
+  border:2px solid #C68F45;border-radius:0;cursor:pointer}
+button.act.ghost{background:transparent;color:#9A96A0;border-color:#3A2B33}
+button.act:active{background:#A3682B;transform:translateY(1px)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px}
+.cal div{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;font-size:11px;background:#0f0b09;color:#6A6672;border:1px solid #241A21}
+.cal div.has{background:#2E5227;color:#9CCB63;border-color:#57913A}
+.cal div.dow{background:none;border:none;color:#5B3311;font-size:9px;aspect-ratio:auto}
+.cal div.today{outline:2px solid #F5C13C;outline-offset:-2px}
+.cal div .dot{width:4px;height:4px;background:#9CCB63;margin-top:2px}
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.calhead b{font-size:13px;color:#FFE79A}
+.calhead button{background:#2a1d14;color:#C68F45;border:1px solid #5B3311;
+  padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.wlist{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.wrow{display:flex;align-items:center;gap:10px;padding:10px;background:#0f0b09;
+  border:1px solid #241A21;font-size:12.5px}
+.wrow.lock{opacity:.42}
+.wrow .nm{flex:1;color:#E8B283}
+.wrow .st{font-size:10.5px;color:#6A6672;letter-spacing:.06em}
+.badge{font-size:9px;padding:2px 6px;background:#5B3311;color:#FFE79A;letter-spacing:.06em}
+#scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:15}
+#scrim.on{opacity:1;pointer-events:auto}
+#hintbar{position:fixed;bottom:4px;left:0;right:0;text-align:center;font-size:10px;
+  color:#4a4550;z-index:5;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="c"></canvas>
+  <div id="scrim"></div>
+  <div id="sheet"></div>
+</div></div>
+<div id="hintbar">ลากนิ้วบนโลกเพื่อเดิน · แตะ A เพื่อคุย · ฟอร์ม ปฏิทิน และบทสนทนาไทย = HTML · โลกกับ HUD = canvas</div>
+<script>
+"use strict";
+/* ─── palette (dreamdca-48) ─────────────────────────────────────────── */
+const P = {
+  ink:    ["#140F14","#241A21","#3A2B33"],
+  grass:  ["#2E5227","#3F6E2E","#57913A","#77B24A","#9CCB63"],
+  foliage:["#16351F","#20502C","#2F6E38","#478C42"],
+  dirt:   ["#3A2410","#573418","#7A4C22","#9C6A34","#C08F51"],
+  stone:  ["#2C2A2E","#474550","#6A6672","#9A96A0"],
+  wood:   ["#3B2109","#5B3311","#7E4A1B","#A3682B","#C68F45"],
+  water:  ["#0E2E52","#17497F","#2470B4","#3E9BD8","#8CD3EE"],
+  gold:   ["#5C3405","#96600C","#D2951A","#F5C13C","#FFE79A"],
+  skin:   ["#6B3B2A","#B36A45","#E8B283"],
+  accent: ["#701B2E","#C4383F","#EE8A55"],
+  cloth:  ["#181A24","#2F374F","#5C6B94"],
+  bloom:  ["#B23F9C","#EE9AD6","#FFF4C2"],
+};
+
+/* ─── 5×7 bitmap font ───────────────────────────────────────────────── */
+const FONT = {
+"A":".###.,#...#,#...#,#####,#...#,#...#,#...#",
+"B":"####.,#...#,#...#,####.,#...#,#...#,####.",
+"C":".###.,#...#,#....,#....,#....,#...#,.###.",
+"D":"####.,#...#,#...#,#...#,#...#,#...#,####.",
+"E":"#####,#....,#....,####.,#....,#....,#####",
+"F":"#####,#....,#....,####.,#....,#....,#....",
+"G":".###.,#...#,#....,#.###,#...#,#...#,.###.",
+"H":"#...#,#...#,#...#,#####,#...#,#...#,#...#",
+"I":"#####,..#..,..#..,..#..,..#..,..#..,#####",
+"J":"..###,...#.,...#.,...#.,...#.,#..#.,.##..",
+"K":"#...#,#..#.,#.#..,##...,#.#..,#..#.,#...#",
+"L":"#....,#....,#....,#....,#....,#....,#####",
+"M":"#...#,##.##,#.#.#,#...#,#...#,#...#,#...#",
+"N":"#...#,##..#,#.#.#,#..##,#...#,#...#,#...#",
+"O":".###.,#...#,#...#,#...#,#...#,#...#,.###.",
+"P":"####.,#...#,#...#,####.,#....,#....,#....",
+"Q":".###.,#...#,#...#,#...#,#.#.#,#..#.,.##.#",
+"R":"####.,#...#,#...#,####.,#.#..,#..#.,#...#",
+"S":".####,#....,#....,.###.,....#,....#,####.",
+"T":"#####,..#..,..#..,..#..,..#..,..#..,..#..",
+"U":"#...#,#...#,#...#,#...#,#...#,#...#,.###.",
+"V":"#...#,#...#,#...#,#...#,#...#,.#.#.,..#..",
+"W":"#...#,#...#,#...#,#...#,#.#.#,##.##,#...#",
+"X":"#...#,#...#,.#.#.,..#..,.#.#.,#...#,#...#",
+"Y":"#...#,#...#,.#.#.,..#..,..#..,..#..,..#..",
+"Z":"#####,....#,...#.,..#..,.#...,#....,#####",
+"0":".###.,#...#,#..##,#.#.#,##..#,#...#,.###.",
+"1":"..#..,.##..,..#..,..#..,..#..,..#..,.###.",
+"2":".###.,#...#,....#,...#.,..#..,.#...,#####",
+"3":"#####,...#.,..#..,...#.,....#,#...#,.###.",
+"4":"...#.,..##.,.#.#.,#..#.,#####,...#.,...#.",
+"5":"#####,#....,####.,....#,....#,#...#,.###.",
+"6":"..##.,.#...,#....,####.,#...#,#...#,.###.",
+"7":"#####,....#,...#.,..#..,.#...,.#...,.#...",
+"8":".###.,#...#,#...#,.###.,#...#,#...#,.###.",
+"9":".###.,#...#,#...#,.####,....#,...#.,.##..",
+".":".....,.....,.....,.....,.....,.##..,.##..",
+"/":"....#,....#,...#.,..#..,.#...,#....,#....",
+"%":"##..#,##.#.,...#.,..#..,.#...,#.##.,..##.",
+":":".....,.##..,.##..,.....,.##..,.##..,.....",
+"-":".....,.....,.....,#####,.....,.....,.....",
+"B$":".#.#.,####.,#...#,####.,#...#,####.,.#.#.",  // Bitcoin glyph
+" ":".....,.....,.....,.....,.....,.....,.....",
+};
+
+
+
+/* deterministic noise so terrain doesn't shimmer */
+function hash(x,y){ let n = x*374761393 + y*668265263; n = (n^(n>>13))*1274126177; return ((n^(n>>16))>>>0)/4294967296; }
+
+/* scaled rect: art authored in 32-unit space, drawn at TILE scale */
+let S = 1;
+function R(u,v,w,h,col){
+  const x=Math.round(u*S), y=Math.round(v*S);
+  ctx.fillStyle=col;
+  ctx.fillRect(x,y,Math.max(1,Math.round((u+w)*S)-x),Math.max(1,Math.round((v+h)*S)-y));
+}
+/* unscaled rect, for UI drawn in device-independent internal pixels */
+function U(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(x|0,y|0,w|0,h|0); }
+
+function text(str,x,y,col,sc){
+  sc = sc||1; let cx = x;
+  for (const ch of str.toUpperCase()){
+    const g = FONT[ch] || FONT[" "];
+    const rows = g.split(",");
+    for (let r=0;r<7;r++) for (let c=0;c<5;c++)
+      if (rows[r][c]==="#") U(cx+c*sc, y+r*sc, sc, sc, col);
+    cx += 6*sc;
+  }
+  return cx-x;
+}
+function textW(str,sc){ return str.length*6*(sc||1)-(sc||1); }
+
+/* ─── terrain ───────────────────────────────────────────────────────── */
+function drawTile(cx,cy,ch,t){
+  const u=cx*32, v=cy*32;
+  if (ch==="G"||ch==="C"){
+    R(u,v,32,32,P.grass[1]);
+    for(let i=0;i<30;i++){                              // mottling
+      const n=hash(cx*97+i,cy*131);
+      const px=u+((n*30)|0), py=v+((hash(i,cx*7+cy*13)*30)|0);
+      R(px,py,3,2, n>0.74?P.grass[2]:(n>0.42?P.grass[0]:P.grass[1]));
+    }
+    for(let i=0;i<7;i++){                               // tufts
+      const n=hash(cx*211+i,cy*307);
+      if(n<0.45) continue;
+      const px=u+((n*28)|0), py=v+((hash(i*5,cx+cy*3)*26)|0);
+      R(px+1,py,1,4,P.grass[3]); R(px,py+1,1,3,P.grass[2]);
+      R(px+2,py+1,1,3,P.grass[4]); R(px,py+4,3,1,P.grass[0]);
+    }
+    if (ch==="C"){                                      // tilled soil rows
+      R(u,v,32,32,P.dirt[1]);
+      for(let r=0;r<4;r++){ R(u,v+r*8,32,5,P.dirt[2]); R(u,v+r*8+5,32,2,P.dirt[0]); }
+      for(let r=0;r<4;r++)                              // leafy crops, not stripes
+        for(let k=0;k<3;k++){
+          const px=u+5+k*10, py=v+r*8+1, n=hash(cx*13+k,cy*17+r);
+          R(px,py-1,1,5,P.foliage[2]);
+          R(px-2,py+1,5,2,n>0.5?P.grass[2]:P.foliage[3]);
+          R(px-3,py+2,7,2,P.grass[1]);
+          R(px-2,py+4,5,1,P.foliage[1]);
+        }
+    }
+  } else if (ch==="D"){
+    R(u,v,32,32,P.dirt[2]);
+    for(let i=0;i<22;i++){
+      const n=hash(cx*53+i,cy*29);
+      R(u+((n*32)|0), v+((hash(i*3,cy*17+cx)*32)|0), 2,2, n>0.6?P.dirt[3]:P.dirt[1]);
+    }
+  } else if (ch==="S"){
+    R(u,v,32,32,P.dirt[1]);
+    for(let a=0;a<2;a++)for(let b=0;b<2;b++){
+      const n=hash(cx*11+a,cy*19+b);
+      R(u+a*16+2,v+b*16+2,12,12, n>0.5?P.stone[3]:P.stone[2]);
+      R(u+a*16+2,v+b*16+13,12,1,P.stone[1]);
+    }
+  } else if (ch==="W"){
+    R(u,v,32,32,P.water[1]);
+    const ph=(t*0.9+cx*0.6+cy*0.35);
+    for(let r=0;r<4;r++){
+      const off=Math.round(Math.sin(ph+r*1.3)*5);
+      R(u+8+off,v+r*8+2,10,2,P.water[2]);
+      R(u+2-off,v+r*8+5,7,1,P.water[3]);
+    }
+    R(u,v,32,1,P.water[0]);
+  }
+}
+
+/* irregular material transitions — this is what blob autotiling buys you,
+   and it is the main reason a pixel world stops reading as rectangles */
+function intrude(cx,cy,side,cols,depth,seed){
+  const u=cx*32, v=cy*32;
+  for(let i=0;i<32;i+=2){
+    const a=hash(cx*131+i+seed, cy*197+side*53);
+    const b=hash(cx*17+((i/8)|0)+seed, cy*23+side*7);   // low-frequency lobes
+    const n=a*0.45+b*0.55;
+    const d=Math.round(n*n*depth*1.6);
+    if(d<=0) continue;
+    const c = n>0.7?cols[1]:cols[0];
+    if(side===0) R(u+i, v,        2, d, c);   // top
+    if(side===1) R(u+32-d, v+i,   d, 2, c);   // right
+    if(side===2) R(u+i, v+32-d,   2, d, c);   // bottom
+    if(side===3) R(u,    v+i,     d, 2, c);   // left
+  }
+}
+function at(x,y){ return (MAP[y]&&MAP[y][x])||"G"; }
+
+function drawTerrain(t){
+  for(let y=0;y<MAP.length;y++)
+    for(let x=0;x<MAP[y].length;x++){ let ch=MAP[y][x];
+      if(ch==="C" && !(typeof GR!=='undefined' && GR.has("crops"))) ch="G";
+      drawTile(x,y,ch,t); }
+
+  const N=[[0,-1],[1,0],[0,1],[-1,0]];
+  for(let y=0;y<MAP.length;y++)for(let x=0;x<MAP[y].length;x++){
+    const me=at(x,y);
+    for(let s=0;s<4;s++){
+      const nb=at(x+N[s][0], y+N[s][1]);
+      if(nb===me) continue;
+      // grass overgrows paths and soil
+      if((me==="D"||me==="S"||me==="C") && nb==="G")
+        intrude(x,y,s,[P.grass[1],P.grass[2]],15,3);
+      // paths scuff into the grass
+      if(me==="G" && (nb==="D"||nb==="S"))
+        intrude(x,y,s,[P.dirt[2],P.dirt[1]],8,11);
+      if(me==="D" && nb==="G"){                      // tufts breaking into the path
+        for(let k=0;k<5;k++){
+          const n=hash(x*61+k+s*7, y*89+k*3);
+          if(n<0.5) continue;
+          const off=6+((n*13)|0);
+          const px = s===3?x*32+off : s===1?x*32+30-off : x*32+((hash(k,x+y)*28)|0);
+          const py = s===0?y*32+off : s===2?y*32+30-off : y*32+((hash(k*3,y+x)*28)|0);
+          R(px,py,3,2,P.grass[1]); R(px+1,py-2,1,3,P.grass[2]); R(px+3,py-1,1,2,P.grass[3]);
+        }
+      }
+    }
+  }
+  // shoreline foam where grass/stone meets water
+  for(let y=1;y<MAP.length;y++)
+    for(let x=0;x<MAP[y].length;x++)
+      if(MAP[y][x]==="W" && MAP[y-1][x]!=="W"){
+        const u=x*32, v=y*32, w=Math.round(Math.sin(t*1.4+x)*2);
+        R(u,v,32,3,P.water[4]); R(u+w+2,v+3,10,2,P.water[3]);
+      }
+}
+
+/* ─── props (authored in 32-unit space) ─────────────────────────────── */
+function cottage(u,v){
+  const [w0,w1,w2,w3,w4]=P.wood;
+  R(u+16,v+96,128,4,P.ink[0]);                       // ground shadow
+  R(u+18,v+56,124,44,w2);                            // walls
+  for(let i=0;i<7;i++) R(u+18,v+58+i*6,124,1,w1);    // planks
+  R(u+18,v+56,124,2,w3);
+  R(u+8,v+22,144,36,P.accent[0]);                    // roof
+  for(let r=0;r<5;r++){
+    R(u+8,v+24+r*7,144,4,r%2?"#8E2F31":P.accent[1]);
+    R(u+8,v+28+r*7,144,2,"#5A1522");
+  }
+  R(u+8,v+20,144,3,P.ink[1]);
+  R(u+68,v+8,24,16,P.stone[1]); R(u+66,v+4,28,5,P.stone[2]);  // chimney
+  R(u+70,v+62,20,20,P.water[1]);                     // round window
+  R(u+72,v+64,16,16,P.water[3]); R(u+78,v+62,3,20,w0); R(u+70,v+70,20,3,w0);
+  R(u+68,v+82,24,18,w0); R(u+70,v+84,20,16,w1);      // door
+  R(u+86,v+91,3,3,P.gold[3]);
+  R(u+30,v+66,20,20,P.ink[1]); R(u+32,v+68,16,16,P.gold[4]);  // lit windows
+  R(u+39,v+66,2,20,w0); R(u+30,v+75,20,2,w0);
+  R(u+110,v+66,20,20,P.ink[1]); R(u+112,v+68,16,16,P.gold[4]);
+  R(u+119,v+66,2,20,w0); R(u+110,v+75,20,2,w0);
+  R(u+60,v+100,40,6,P.stone[2]); R(u+60,v+106,40,4,P.stone[1]); // step
+}
+function vault(u,v){
+  R(u+2,v+58,60,4,P.ink[0]);
+  R(u+4,v+16,56,44,P.gold[1]); R(u+6,v+18,52,40,P.gold[2]);
+  R(u+4,v+12,56,6,P.gold[3]); R(u+4,v+10,56,2,P.ink[1]);
+  R(u+16,v+26,32,26,P.gold[0]); R(u+18,v+28,28,22,P.gold[3]);
+  R(u+28,v+34,10,10,P.gold[0]); R(u+30,v+30,2,18,P.gold[4]); R(u+24,v+38,18,2,P.gold[4]);
+  R(u+4,v+52,56,8,P.gold[0]);
+}
+function coop(u,v){
+  R(u+2,v+80,84,4,P.ink[0]);
+  R(u+8,v+40,72,42,P.wood[2]);
+  for(let i=0;i<6;i++) R(u+8,v+42+i*7,72,1,P.wood[1]);
+  R(u+2,v+16,88,26,P.water[1]);                       // blue roof
+  for(let r=0;r<3;r++) R(u+2,v+18+r*8,88,3,P.water[2]);
+  R(u+2,v+14,88,3,P.ink[1]);
+  R(u+30,v+52,28,30,P.ink[0]); R(u+32,v+54,24,28,"#2A1B0E");
+  R(u+70,v+30,6,12,P.wood[0]);
+}
+function tree(u,v,seed){
+  const s=hash(seed,7);
+  R(u+3,v+60,26,5,P.ink[0]);                              // shadow
+  R(u+11,v+38,10,26,P.wood[0]);                           // trunk
+  R(u+12,v+38,7,26,P.wood[1]); R(u+12,v+38,3,26,P.wood[2]);
+  R(u+9,v+58,14,5,P.wood[0]);                             // root flare
+  const rw=44+((s*10)|0), cx=u+16, cy=v+22;               // canopy centre
+  const ry=21, rx=rw/2;
+  // filled blob with an irregular, per-row jittered radius
+  for(let dy=-ry; dy<=ry; dy++){
+    const k=Math.sqrt(Math.max(0,1-(dy*dy)/(ry*ry)));
+    const j=(hash(seed*7, dy+40)-0.5)*5;
+    const w=Math.max(0, k*rx + j);
+    if(w<1) continue;
+    const shade = dy<-6 ? P.foliage[3] : (dy<4 ? P.foliage[2] : P.foliage[1]);
+    R(cx-w, cy+dy, w*2, 1, shade);
+    R(cx-w, cy+dy, 1.5, 1, P.foliage[0]);                 // right/left rim
+    R(cx+w-1.5, cy+dy, 1.5, 1, P.foliage[0]);
+  }
+  for(let i=0;i<26;i++){                                  // leaf clusters
+    const n=hash(seed*31+i,i*13), m=hash(i*17,seed*5);
+    const a=n*6.283, r=Math.sqrt(m)*0.82;
+    const px=cx+Math.cos(a)*r*rx, py=cy+Math.sin(a)*r*ry;
+    R(px-2,py-1,4,3, (py<cy-3)?P.foliage[3]:P.foliage[1]);
+    if(n>0.72) R(px-1,py-2,3,2,P.grass[3]);               // sun-catch highlight
+  }
+  R(cx-rx*0.55, cy+ry-7, rx*1.1, 4, P.foliage[0]);        // underside shadow
+}
+function bush(u,v,seed){
+  R(u+6,v+22,20,10,P.foliage[1]); R(u+9,v+18,14,12,P.foliage[2]);
+  for(let i=0;i<4;i++) R(u+9+i*4, v+19+((hash(seed+i,3)*5)|0), 3,3, P.foliage[3]);
+}
+function flowers(u,v,seed){
+  for(let i=0;i<4;i++){
+    const n=hash(seed*7+i,i*5);
+    const x=u+3+((n*26)|0), y=v+16+((hash(i,seed)*12)|0);
+    R(x,y,1,4,P.grass[2]);
+    R(x-1,y-2,3,3, n>0.66?P.bloom[1]:(n>0.33?P.gold[3]:P.bloom[2]));
+  }
+}
+function rock(u,v){
+  R(u+4,v+26,24,4,P.ink[0]);
+  R(u+6,v+14,20,14,P.stone[2]); R(u+8,v+12,14,6,P.stone[3]); R(u+6,v+24,20,4,P.stone[1]);
+}
+function fenceH(u,v){
+  R(u,v+16,32,3,P.wood[2]); R(u,v+23,32,3,P.wood[2]);
+  R(u+2,v+10,4,20,P.wood[1]); R(u+2,v+10,2,20,P.wood[3]);
+}
+function fenceV(u,v){
+  R(u+14,v,4,32,P.wood[2]); R(u+14,v,2,32,P.wood[3]);
+}
+function chest(u,v,t){
+  R(u+2,v+26,28,3,P.ink[0]);
+  R(u+4,v+14,24,14,P.wood[1]); R(u+4,v+8,24,8,P.wood[2]);
+  R(u+4,v+8,24,2,P.wood[3]); R(u+4,v+18,24,3,P.gold[1]);
+  R(u+14,v+17,4,6,P.gold[3]);
+  const sp=Math.sin(t*3)>0.4;
+  if(sp){ R(u+26,v+4,2,2,P.bloom[2]); R(u+25,v+5,4,1,P.gold[4]); R(u+27,v+3,1,4,P.gold[4]); }
+}
+function sign(u,v){
+  R(u+13,v+14,6,18,P.wood[1]);
+  R(u+2,v+2,28,16,P.wood[2]); R(u+2,v+2,28,2,P.wood[4]); R(u+2,v+16,28,2,P.wood[0]);
+  R(u+12,v+5,3,10,P.gold[2]); R(u+11,v+7,7,2,P.gold[3]); R(u+11,v+11,7,2,P.gold[3]);
+  R(u+13,v+3,2,14,P.gold[4]);
+}
+function bridge(u,v){
+  R(u-2,v-2,100,68,P.wood[0]);
+  for(let r=0;r<8;r++){
+    const n=hash(r,7);
+    R(u,v+r*8,96,6, n>0.6?P.wood[4]:P.wood[3]);
+    R(u,v+r*8+6,96,2,P.wood[1]);
+    R(u+4+((n*80)|0), v+r*8+2, 10,1, P.wood[2]);        // grain
+  }
+  R(u-2,v-2,5,68,P.wood[2]); R(u+93,v-2,5,68,P.wood[2]); // rails
+  for(let r=0;r<5;r++){ R(u-4,v+r*15,8,7,P.wood[1]); R(u+92,v+r*15,8,7,P.wood[1]); }
+}
+function smoke(u,v,t){
+  for(let i=0;i<4;i++){
+    const p=(t*0.6+i*0.25)%1;
+    const y=v-p*26, x=u+Math.sin(p*5+i)*5, s=2+p*4;
+    ctx.globalAlpha = 0.55*(1-p);
+    R(x,y,s,s,P.stone[3]);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ─── characters ────────────────────────────────────────────────────── */
+// frame: 0 contact-L, 1 passing, 2 contact-R, 3 passing
+function player(u,v,dir,frame){
+  const [c0,c1,c2]=P.cloth, [k0,k1,k2]=P.skin, ink=P.ink[0];
+  const bob = (frame===1||frame===3)?1:0;
+  const y = v+bob;
+  R(u+6,v+46,20,3,ink);                                  // shadow
+  R(u+8,y+2,16,10,"#2E1B10"); R(u+9,y+0,14,5,"#3E2716");  // hair
+  R(u+10,y+7,12,9,k1);                                    // face
+  if(dir!=="north"){
+    R(u+10,y+8,12,7,k2);
+    const ex = dir==="east"?14:(dir==="west"?8:10);
+    R(u+ex,y+10,2,2,ink); if(dir==="south") R(u+18,y+10,2,2,ink);
+  }
+  R(u+8,y+15,16,3,"#2E1B10");
+  R(u+7,y+17,18,16,c0);                                   // hoodie
+  R(u+7,y+17,18,2,c1); R(u+7,y+31,18,2,P.ink[1]);
+  if(dir==="south"){ R(u+14,y+21,4,7,P.gold[3]); R(u+13,y+23,6,2,P.gold[2]); R(u+13,y+26,6,2,P.gold[2]); }
+  R(u+5,y+19,3,11,c0); R(u+24,y+19,3,11,c0);              // arms
+  R(u+5,y+29,3,3,k1);  R(u+24,y+29,3,3,k1);
+  R(u+9,y+32,14,10,c1);                                   // legs
+  const swing = (frame===0)?2:(frame===2?-2:0);
+  R(u+9,y+34+Math.max(0,swing),6,8,c1);
+  R(u+17,y+34+Math.max(0,-swing),6,8,c1);
+  R(u+8,y+41+Math.max(0,swing),8,4,"#E8E6EA");            // sneakers
+  R(u+16,y+41+Math.max(0,-swing),8,4,"#E8E6EA");
+  R(u+8,y+44+Math.max(0,swing),8,2,P.ink[1]);
+  R(u+16,y+44+Math.max(0,-swing),8,2,P.ink[1]);
+}
+function chicken(u,v,t,seed){
+  const peck = (Math.sin(t*2+seed)>0.65)?4:0;
+  R(u+3,v+14,10,2,P.ink[0]);
+  R(u+3,v+5,10,9,"#F2EEE4"); R(u+4,v+6,8,7,"#FFFBF2");
+  R(u+9,v+1+peck,6,6,"#F2EEE4");
+  R(u+10,v+0+peck,4,2,P.accent[1]);
+  R(u+14,v+3+peck,2,2,P.gold[2]);
+  R(u+11,v+2+peck,1,1,P.ink[0]);
+  R(u+5,v+13,2,3,P.gold[2]); R(u+9,v+13,2,3,P.gold[2]);
+}
+function dog(u,v,t){
+  const wag=Math.sin(t*7)>0?1:-1;
+  R(u+2,v+17,20,3,P.ink[0]);
+  R(u+4,v+7,14,10,"#D2751E"); R(u+5,v+8,12,6,"#E8933A");
+  R(u+14,v+3,8,8,"#D2751E"); R(u+15,v+5,6,5,"#F2C08A");
+  R(u+15,v+1,3,4,"#B8600F"); R(u+19,v+1,3,4,"#B8600F");
+  R(u+20,v+6,2,2,P.ink[0]);
+  R(u+2,v+3-wag,4,6,"#E8933A");
+  R(u+5,v+16,3,4,"#F2C08A"); R(u+13,v+16,3,4,"#F2C08A");
+  R(u+14,v+10,7,2,P.foliage[2]); R(u+17,v+11,2,2,P.gold[3]);
+}
+function npc(u,v,col){
+  R(u+6,v+46,20,3,P.ink[0]);
+  R(u+8,v+2,16,10,"#4A2E18"); R(u+9,v+0,14,5,"#5E3D22");
+  R(u+10,v+7,12,9,P.skin[2]); R(u+13,v+10,2,2,P.ink[0]); R(u+18,v+10,2,2,P.ink[0]);
+  R(u+7,v+17,18,16,col); R(u+7,v+17,18,2,"#FFFFFF22");
+  R(u+5,v+19,3,11,col); R(u+24,v+15,3,13,col);
+  R(u+24,v+13,3,3,P.skin[2]); R(u+5,v+29,3,3,P.skin[2]);
+  R(u+9,v+32,14,10,P.cloth[1]);
+  R(u+8,v+42,8,4,"#E8E6EA"); R(u+16,v+42,8,4,"#E8E6EA");
+}
+
+
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   1. LEDGER  —  the single source of truth.
+   Everything downstream is a PURE FUNCTION of this array.
+   sats and cents are INTEGERS. No floats, ever.
+   ════════════════════════════════════════════════════════════════════ */
+const LS_KEY = "dreamdca.ledger.v1";
+let ledger = [];
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;  // LOCAL date, not UTC
+const today = () => iso(new Date());
+const dayAdd = (s,n) => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return iso(d); };
+
+function seed(){
+  const out=[]; const now=new Date();
+  for(let i=59;i>=0;i--){
+    if(i>12 && hash(i,3)<0.34) continue;              // gaps early on, solid streak recently
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    const price = 88000 + Math.round(hash(i,7)*17000);
+    const fiat  = 112 + Math.round(hash(i,11)*176);
+    out.push({ id:"s"+i, date:iso(d), fiatCents:fiat*100,
+               sats: Math.round(fiat/price*1e8) });
+  }
+  return out;
+}
+function load(){
+  try{ const r=localStorage.getItem(LS_KEY); if(r){ ledger=JSON.parse(r); return; } }catch(e){}
+  ledger=seed(); save();
+}
+function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(ledger)); }catch(e){} }
+
+/* ── derived: pure(ledger) ───────────────────────────────────────────── */
+const GOAL_SATS = 20000000;          // 0.2 BTC
+const STREAK_GOAL = 30;
+function derive(L){
+  let sats=0, cents=0; const days=new Set();
+  for(const e of L){ sats+=e.sats; cents+=e.fiatCents; days.add(e.date); }
+  let streak=0, cur=today();
+  if(!days.has(cur)) cur=dayAdd(cur,-1);              // today not yet logged = still alive
+  while(days.has(cur)){ streak++; cur=dayAdd(cur,-1); }
+  return { sats, cents, daysRecorded:days.size, days, streak,
+           avgCost: sats? (cents/100)/(sats/1e8) : 0,
+           pct: sats/GOAL_SATS };
+}
+
+/* ── milestones: DATA, not code ─────────────────────────────────────── */
+const MILESTONES = [
+  { id:"first_light", req:d=>d.sats>=1000000,      grants:["lantern"],            title:"LANTERN LIT",  sub:"0.01 BTC" },
+  { id:"good_boy",    req:d=>d.sats>=3000000,      grants:["dog"],                title:"A DOG ARRIVES", sub:"0.03 BTC" },
+  { id:"crop_plot",   req:d=>d.sats>=4000000,      grants:["crops","scarecrow"],  title:"CROP PLOT OPEN", sub:"0.04 BTC" },
+  { id:"cottage_up",  req:d=>d.sats>=6000000,     grants:["cottage_lv4"],        title:"COTTAGE UPGRADED", sub:"0.06 BTC" },
+  { id:"steady_7",    req:d=>d.streak>=7,          grants:["bench"],              title:"7 DAY STREAK",  sub:"A BENCH APPEARS" },
+  { id:"steady_30",   req:d=>d.streak>=30,         grants:["npc2"],               title:"30 DAY STREAK", sub:"A NEIGHBOUR VISITS" },
+  { id:"logged_50",   req:d=>d.daysRecorded>=50,   grants:["chest_b"],            title:"50 DAYS LOGGED", sub:"A CHEST APPEARS" },
+];
+function unlocksOf(d){ const s=new Set(); for(const m of MILESTONES) if(m.req(d)) s.add(m.id); return s; }
+function grantsOf(u){ const g=new Set(); for(const m of MILESTONES) if(u.has(m.id)) m.grants.forEach(x=>g.add(x)); return g; }
+function houseLevel(d){ return 1 + (d.sats>=1000000) + (d.sats>=3000000) + (d.sats>=6000000); }
+
+let D, UN, GR, seen = new Set();
+function recompute(){ D=derive(ledger); UN=unlocksOf(D); GR=grantsOf(UN); }
+function seenLoad(){ try{ seen=new Set(JSON.parse(localStorage.getItem(LS_KEY+".seen")||"[]")); }catch(e){} }
+function seenSave(){ try{ localStorage.setItem(LS_KEY+".seen",JSON.stringify([...seen])); }catch(e){} }
+
+/* ══════════════════════════════════════════════════════════════════════
+   2. WORLD  —  terrain grid + prop manifest
+   ════════════════════════════════════════════════════════════════════ */
+const TILE=32, VW=360, VH=640;
+const MAP=[
+"GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG",
+"GGGGDDDGGGG","GGGGDDDGGGG","GGGGDDDGGGG","GGDDDDDDDGG","GGDDDDDDDGG",
+"GGGGDDDCCCC","GGGGDDDCCCC","GGGGDDDCCCC","GGGGSSSGGGG","GGGGSSSGGGG",
+"GGGGSSSGGGG","WWWWSSSWWWW","WWWWSSSWWWW","WWWWWWWWWWW","WWWWWWWWWWW"];
+
+/* x,y = sprite top-left · aY = ground-contact row · fp = [x,y,w,h] collision, or null.
+   `need` = grant id required for this prop to exist.  Nothing here is hard-coded
+   into a scene: flipping a milestone flips a prop.                          */
+const PROPS=[
+ {k:"cottage", x:96, y:88,  aY:106, fp:[18,88,124,18], talk:"บ้านอบอุ่นดี\nบันทึกครบ 30 วันจะได้ต่อเติม"},
+ {k:"vault",   x:250,y:138, aY:60,  fp:[4,44,56,16],   talk:"เก็บไว้ 0.0418 BTC\nเป้าหมาย 0.2 BTC"},
+ {k:"coop",    x:2,  y:250, aY:82,  fp:[8,56,72,26]},
+ {k:"sign",    x:72, y:288, aY:30,  fp:[12,20,8,8],    talk:"BTC HOMESTEAD\nสะสมทีละวัน"},
+ {k:"bridge",  x:128,y:512, aY:64,  fp:null},
+ {k:"tree", x:0,  y:0,   aY:62, fp:[10,52,12,10], s:1},
+ {k:"tree", x:32, y:64,  aY:62, fp:[10,52,12,10], s:2},
+ {k:"tree", x:288,y:0,   aY:62, fp:[10,52,12,10], s:3},
+ {k:"tree", x:320,y:64,  aY:62, fp:[10,52,12,10], s:4},
+ {k:"tree", x:0,  y:384, aY:62, fp:[10,52,12,10], s:5},
+ {k:"tree", x:320,y:416, aY:62, fp:[10,52,12,10], s:6},
+ {k:"tree", x:288,y:512, aY:62, fp:[10,52,12,10], s:7},
+ {k:"tree", x:0,  y:128, aY:62, fp:[10,52,12,10], s:8},
+ {k:"rock", x:64, y:224, aY:28, fp:[6,20,20,8]},
+ {k:"rock", x:256,y:416, aY:28, fp:[6,20,20,8]},
+ {k:"bush", x:64, y:160, aY:30, fp:null, s:11},
+ {k:"bush", x:256,y:192, aY:30, fp:null, s:12},
+ {k:"bush", x:32, y:448, aY:30, fp:null, s:13},
+ {k:"flowers", x:96, y:128, aY:28, fp:null, s:21},
+ {k:"flowers", x:256,y:288, aY:28, fp:null, s:22},
+ {k:"flowers", x:32, y:320, aY:28, fp:null, s:23},
+ {k:"flowers", x:288,y:448, aY:28, fp:null, s:24},
+ {k:"chest",   x:32, y:480, aY:28, fp:[4,16,24,10], talk:"หีบสมบัติ\nปลดล็อกที่ 0.01 BTC", need:"lantern"},
+ {k:"chest",   x:304,y:384, aY:28, fp:[4,16,24,10], talk:"หีบใบที่สอง\nบันทึกครบ 50 วัน",  need:"chest_b"},
+ {k:"fenceV",  x:224,y:320, aY:28, fp:[13,0,6,32], need:"crops"},
+ {k:"fenceV",  x:224,y:352, aY:28, fp:[13,0,6,32], need:"crops"},
+ {k:"fenceV",  x:224,y:384, aY:28, fp:[13,0,6,32], need:"crops"},
+ {k:"scarecrow", x:296,y:300, aY:44, fp:[10,34,10,10], need:"scarecrow", talk:"หุ่นไล่กา\nเฝ้าแปลงผักให้"},
+ {k:"lantern", x:232,y:206, aY:30, fp:null, need:"lantern"},
+ {k:"bench",   x:136,y:210, aY:24, fp:[2,14,28,8], need:"bench", talk:"ม้านั่งหน้าบ้าน\nรางวัลของการทำต่อเนื่อง 7 วัน"},
+];
+const NPCS=[
+ {x:82, y:284, col:()=>P.accent[1], talk:"วันนี้บันทึกหรือยัง\nไม่ต้องเยอะ ขอแค่สม่ำเสมอ"},
+ {x:232,y:250, col:()=>P.grass[2],  talk:"ฉันดูแลแปลงผักให้\nเธอดูแลนิสัยการออมนะ", need:"npc2"},
+];
+
+/* solid grid from terrain + prop footprints */
+let solids=[];
+function buildSolids(){
+  solids=[];
+  for(let y=0;y<MAP.length;y++)for(let x=0;x<MAP[y].length;x++){
+    if(MAP[y][x]!=="W") continue;
+    if(x>=4&&x<=6&&y>=16&&y<=17) continue;            // the bridge deck
+    solids.push([x*32,y*32,32,32]);
+  }
+  for(const p of PROPS){
+    if(p.need && !GR.has(p.need)) continue;
+    if(!p.fp) continue;
+    solids.push([p.x+p.fp[0], p.y+p.fp[1], p.fp[2], p.fp[3]]);
+  }
+}
+const hitAny=(x,y,w,h)=>solids.some(s=>x<s[0]+s[2]&&x+w>s[0]&&y<s[1]+s[3]&&y+h>s[1]);
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. PLAYER + input
+   ════════════════════════════════════════════════════════════════════ */
+const PL={x:176,y:400,dir:"south",moving:false,anim:0};
+const KEY={};
+const JOY={on:false,ox:0,oy:0,dx:0,dy:0};
+const SPEED=52;                                       // px/sec
+
+function movePlayer(dt){
+  let vx=0,vy=0;
+  if(KEY.ArrowLeft||KEY.a)vx-=1; if(KEY.ArrowRight||KEY.d)vx+=1;
+  if(KEY.ArrowUp||KEY.w)  vy-=1; if(KEY.ArrowDown||KEY.s) vy+=1;
+  if(JOY.on){ vx+=JOY.dx; vy+=JOY.dy; }
+  const m=Math.hypot(vx,vy);
+  PL.moving = m>0.12;
+  if(!PL.moving){ PL.anim=0; return; }
+  vx/=m; vy/=m;
+  if(Math.abs(vx)>Math.abs(vy)) PL.dir = vx>0?"east":"west";
+  else                          PL.dir = vy>0?"south":"north";
+  PL.anim += dt*7;
+  const step=SPEED*dt, BW=14, BH=8;
+  let nx=PL.x+vx*step;
+  if(!hitAny(nx-BW/2, PL.y-BH, BW, BH) && nx>10 && nx<VW-10) PL.x=nx;
+  let ny=PL.y+vy*step;
+  if(!hitAny(PL.x-BW/2, ny-BH, BW, BH) && ny>44 && ny<VH-8) PL.y=ny;
+}
+
+/* nearest interactable */
+function nearby(){
+  let best=null,bd=34;
+  const cand=[];
+  for(const p of PROPS){ if(p.need&&!GR.has(p.need))continue; if(!p.talk)continue;
+    cand.push({x:p.x+16,y:p.y+p.aY,talk:p.talk}); }
+  for(const n of NPCS){ if(n.need&&!GR.has(n.need))continue;
+    cand.push({x:n.x+16,y:n.y+46,talk:n.talk}); }
+  if(GR.has("dog")) cand.push({x:dogPos().x+11,y:dogPos().y+18,talk:"หมาน้อยกระดิกหาง\nดีใจที่เธอกลับมา"});
+  for(const c of cand){ const d=Math.hypot(c.x-PL.x,c.y-PL.y); if(d<bd){bd=d;best=c;} }
+  return best;
+}
+function dogPos(){ return {x:PL.x+18,y:PL.y-6}; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. RENDER
+   ════════════════════════════════════════════════════════════════════ */
+function scene(t,dt){
+  ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle=P.ink[0]; ctx.fillRect(0,0,VW,VH);
+  drawTerrain(t);
+
+  const Z=[]; const add=(y,f)=>Z.push({y,f});
+  for(const p of PROPS){
+    if(p.need && !GR.has(p.need)) continue;
+    const {x,y}=p, d=y+p.aY;
+    switch(p.k){
+      case "cottage": add(d,()=>{ cottage(x,y); smoke(x+76,y+6,t);
+                                  if(GR.has("cottage_lv4")) R(x+8,y+16,144,5,P.gold[3]); }); break;
+      case "vault":   add(d,()=>vault(x,y)); break;
+      case "coop":    add(d,()=>coop(x,y)); break;
+      case "sign":    add(d,()=>sign(x,y)); break;
+      case "bridge":  add(d,()=>bridge(x,y)); break;
+      case "tree":    add(d,()=>tree(x,y,p.s)); break;
+      case "bush":    add(d,()=>bush(x,y,p.s)); break;
+      case "rock":    add(d,()=>rock(x,y)); break;
+      case "flowers": add(d,()=>flowers(x,y,p.s)); break;
+      case "chest":   add(d,()=>chest(x,y,t)); break;
+      case "fenceV":  add(d,()=>fenceV(x,y)); break;
+      case "lantern": add(d,()=>lantern(x,y,t)); break;
+      case "bench":   add(d,()=>bench(x,y)); break;
+      case "scarecrow":add(d,()=>scarecrow(x,y,t)); break;
+    }
+  }
+  for(const n of NPCS){ if(n.need&&!GR.has(n.need))continue;
+    add(n.y+46,()=>npc(n.x,n.y,n.col())); }
+  add(11*32+16,()=>chicken(38,352,t,1));
+  add(11*32+16,()=>chicken(70,358,t,3));
+  add(12*32+18,()=>chicken(18,384,t,5));
+  if(GR.has("dog")){ const dp=dogPos(); add(dp.y+20,()=>dog(dp.x,dp.y,t)); }
+  const fr=[0,1,2,3][Math.floor(PL.anim)%4];
+  add(PL.y,()=>player(PL.x-16, PL.y-46, PL.dir, PL.moving?fr:1));
+  Z.sort((a,b)=>a.y-b.y).forEach(z=>z.f());
+
+  const nb=nearby();
+  if(nb){ const bx=Math.round(nb.x)-3, by=Math.round(nb.y)-58+Math.round(Math.sin(t*4)*2);
+    R(bx-3,by-3,12,15,P.ink[0]); R(bx-1,by-1,8,11,P.gold[3]); R(bx,by,6,9,P.gold[4]);
+    R(bx+2,by+1,2,4,P.ink[0]); R(bx+2,by+6,2,2,P.ink[0]); R(bx+1,by+11,4,3,P.ink[0]); }
+  hud(t, !!nb);
+}
+
+/* ── HUD: everything below is drawn as pixels. No DOM, no rounded corners. ── */
+function panel(x,y,w,h){
+  U(x,y,w,h,P.wood[0]); U(x+2,y+2,w-4,h-4,P.wood[1]); U(x+4,y+4,w-8,h-8,"#3A2412");
+  U(x+2,y+2,w-4,2,P.wood[3]); U(x+2,y+2,2,h-4,P.wood[3]);
+  U(x+2,y+h-4,w-4,2,P.ink[0]); U(x+w-4,y+2,2,h-4,P.ink[0]);
+  U(x,y,2,2,P.ink[0]); U(x+w-2,y,2,2,P.ink[0]); U(x,y+h-2,2,2,P.ink[0]); U(x+w-2,y+h-2,2,2,P.ink[0]);
+}
+function gauge(x,y,w,h,pct,col){
+  U(x,y,w,h,P.ink[0]); U(x+1,y+1,w-2,h-2,"#241505");
+  const f=Math.max(0,Math.min(1,pct))*(w-4);
+  U(x+2,y+2,f,h-4,col[1]); U(x+2,y+2,f,2,col[2]); U(x+2,y+h-4,f,2,col[0]);
+  for(let i=1;i<4;i++) U(x+Math.round(i*(w-2)/4),y+1,1,h-2,P.wood[0]);
+}
+let BTNS=[];
+function hud(t,canAct){
+  panel(6,6,176,26); text("BTC HOMESTEAD",16,13,P.gold[4],2);
+  panel(VW-32,6,26,26); text("O",VW-24,13,P.stone[3],2);
+
+  panel(6,36,220,66);
+  text("STREAK",14,44,P.wood[4],1);
+  text(D.streak+" DAYS",56,42,P.gold[4],2);
+  gauge(14,58,202,11,D.streak/STREAK_GOAL,[P.grass[0],P.grass[2],P.grass[4]]);
+  text((D.sats/1e8).toFixed(4)+" BTC",14,74,P.gold[3],1);
+  text(D.daysRecorded+"/730 DAYS",100,74,P.stone[3],1);
+  text("HOUSE LV "+houseLevel(D),14,86,P.wood[4],1);
+  text((D.pct*100).toFixed(1)+"% OF GOAL",100,86,P.grass[3],1);
+
+  BTNS=[];
+  const labels=[["WORLDS","worlds"],["RECORD","record"],["CALENDAR","calendar"]];
+  const by=VH-46, bw=Math.floor((VW-16)/3)-4;
+  labels.forEach(([lab,id],i)=>{
+    const bx=8+i*(bw+6); panel(bx,by,bw,38); BTNS.push({x:bx,y:by,w:bw,h:38,id});
+    const s=bw>100?2:1;
+    text(lab, bx+Math.floor((bw-textW(lab,s))/2), by+15, i===1?P.gold[4]:P.wood[4], s);
+  });
+  if(canAct){ panel(VW-58,VH-104,50,44); BTNS.push({x:VW-58,y:VH-104,w:50,h:44,id:"talk"});
+              text("A",VW-40,VH-90,P.gold[4],3); }
+  if(TOAST.t>0){
+    const h=38; panel(24,VH-168,VW-48,h);
+    text(TOAST.title,38,VH-160,P.bloom[2],1);
+    text(TOAST.sub,  38,VH-148,P.gold[3],1);
+  }
+
+}
+const TOAST={t:0,title:"",sub:""};
+const TALK={t:0,s:""};
+const talkEl=document.createElement("div"); talkEl.id="talkbox";
+talkEl.style.cssText="position:absolute;left:14px;right:14px;bottom:104px;z-index:12;"+
+ "background:#3A2412;border:3px solid #C68F45;box-shadow:inset 0 0 0 3px #5B3311;"+
+ "padding:11px 13px;font-size:13px;line-height:1.6;color:#FFE79A;white-space:pre-line;"+
+ "display:none;pointer-events:none";
+document.getElementById("stage").appendChild(talkEl);
+function showTalk(s){ TALK.t=3.4; talkEl.textContent=s; talkEl.style.display="block"; }
+function hideTalk(){ talkEl.style.display="none"; }
+
+/* extra props the testbench didn't have */
+function lantern(u,v,t){
+  R(u+10,v+26,12,3,P.ink[0]); R(u+14,v+8,4,20,P.wood[1]);
+  R(u+10,v+2,12,10,P.ink[1]); R(u+12,v+4,8,7, Math.sin(t*3)>-0.5?P.gold[4]:P.gold[3]);
+  R(u+11,v+1,10,2,P.stone[2]);
+}
+function bench(u,v){
+  R(u+2,v+22,28,3,P.ink[0]);
+  R(u+2,v+10,28,4,P.wood[3]); R(u+2,v+15,28,3,P.wood[2]);
+  R(u+4,v+14,3,10,P.wood[1]); R(u+25,v+14,3,10,P.wood[1]);
+  R(u+2,v+4,28,3,P.wood[2]); R(u+4,v+6,3,6,P.wood[1]); R(u+25,v+6,3,6,P.wood[1]);
+}
+function scarecrow(u,v,t){
+  const sw=Math.sin(t*1.5)*1;
+  R(u+8,v+40,16,3,P.ink[0]);
+  R(u+14,v+16,4,26,P.wood[1]);
+  R(u+2,v+22+sw,28,3,P.wood[2]);
+  R(u+10,v+6,12,12,P.dirt[4]); R(u+12,v+9,2,2,P.ink[0]); R(u+18,v+9,2,2,P.ink[0]);
+  R(u+13,v+13,6,1,P.ink[0]);
+  R(u+6,v+2,20,5,P.gold[2]); R(u+9,v+0,14,3,P.gold[1]);
+  R(u+8,v+18,16,10,P.accent[1]); R(u+8,v+18,16,2,P.accent[2]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. HTML SHEETS  —  native inputs. This is the part Godot makes hard.
+   ════════════════════════════════════════════════════════════════════ */
+const sheetEl=document.getElementById("sheet"), scrim=document.getElementById("scrim");
+function closeSheet(){ sheetEl.classList.remove("open"); scrim.classList.remove("on"); }
+function openSheet(html){ sheetEl.innerHTML=html; sheetEl.classList.add("open"); scrim.classList.add("on"); }
+scrim.onclick=closeSheet;
+
+const fmt=n=>n.toLocaleString("en-US");
+function sheetRecord(date){
+  date = date||today();
+  openSheet(`
+    <h2>บันทึกการซื้อ</h2>
+    <p class="hint">ย้อนหลังได้ ระบบคำนวณใหม่ทั้งหมดเองอัตโนมัติ</p>
+    <label>วันที่</label><input id="f_date" type="date" value="${date}">
+    <label>จำนวนเงิน (USD)</label><input id="f_fiat" type="number" inputmode="decimal" placeholder="9.00" step="0.01">
+    <label>ราคา BTC ตอนซื้อ (USD)</label><input id="f_px" type="number" inputmode="decimal" placeholder="95000" step="1">
+    <div class="calc" id="f_calc">กรอกตัวเลขเพื่อดูผลลัพธ์</div>
+    <div class="btnrow">
+      <button class="act ghost" onclick="closeSheet()">ยกเลิก</button>
+      <button class="act" onclick="submitEntry()">บันทึก</button>
+    </div>`);
+  const upd=()=>{
+    const f=parseFloat(document.getElementById("f_fiat").value)||0;
+    const p=parseFloat(document.getElementById("f_px").value)||0;
+    const el=document.getElementById("f_calc");
+    if(!f||!p){ el.textContent="กรอกตัวเลขเพื่อดูผลลัพธ์"; return; }
+    const sats=Math.round(f/p*1e8);
+    const nd=derive([...ledger,{date:document.getElementById("f_date").value,sats,fiatCents:Math.round(f*100)}]);
+    el.innerHTML=`ได้ <b>${fmt(sats)} sats</b> (${(sats/1e8).toFixed(8)} BTC)<br>
+      รวมใหม่ ${(nd.sats/1e8).toFixed(4)} BTC · ${(nd.pct*100).toFixed(1)}% ของเป้า<br>
+      ต้นทุนเฉลี่ยใหม่ $${nd.avgCost.toLocaleString("en-US",{maximumFractionDigits:0})}`;
+  };
+  ["f_fiat","f_px","f_date"].forEach(i=>document.getElementById(i).addEventListener("input",upd));
+}
+window.submitEntry=function(){
+  const d=document.getElementById("f_date").value;
+  const f=parseFloat(document.getElementById("f_fiat").value);
+  const p=parseFloat(document.getElementById("f_px").value);
+  if(!d||!f||!p){ document.getElementById("f_calc").innerHTML="<b style='color:#EE8A55'>กรอกให้ครบก่อนนะครับ</b>"; return; }
+  ledger.push({ id:"u"+Date.now(), date:d, sats:Math.round(f/p*1e8), fiatCents:Math.round(f*100) });
+  save(); applyChange(); closeSheet();
+};
+function applyChange(){
+  const before=new Set(UN);
+  recompute(); buildSolids();
+  const fresh=[...UN].filter(id=>!before.has(id) && !seen.has(id));
+  fresh.forEach(id=>seen.add(id)); seenSave();
+  if(fresh.length){
+    const m=MILESTONES.find(x=>x.id===fresh[0]);
+    TOAST.t=4; TOAST.title=(fresh.length>1?`ปลดล็อก ${fresh.length} รายการ · `:"")+m.title; TOAST.sub=m.sub;
+  }
+}
+function sheetCalendar(off){
+  off=off||0;
+  const base=new Date(); base.setDate(1); base.setMonth(base.getMonth()+off);
+  const y=base.getFullYear(), m=base.getMonth();
+  const first=new Date(y,m,1).getDay(), n=new Date(y,m+1,0).getDate();
+  const MN=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  let cells=["อา","จ","อ","พ","พฤ","ศ","ส"].map(d=>`<div class="dow">${d}</div>`).join("");
+  for(let i=0;i<first;i++) cells+="<div style='background:none;border:none'></div>";
+  for(let d=1;d<=n;d++){
+    const s=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const has=D.days.has(s), td=s===today();
+    cells+=`<div class="${has?"has":""}${td?" today":""}" onclick="sheetRecord('${s}')">${d}${has?"<span class='dot'></span>":""}</div>`;
+  }
+  openSheet(`
+    <h2>ปฏิทิน 2026–2027</h2>
+    <p class="hint">แตะวันไหนก็บันทึกย้อนหลังได้ทันที</p>
+    <div class="calhead">
+      <button onclick="sheetCalendar(${off-1})">‹</button>
+      <b>${MN[m]} ${y+543}</b>
+      <button onclick="sheetCalendar(${off+1})">›</button>
+    </div>
+    <div class="cal">${cells}</div>
+    <div class="calc">บันทึกแล้ว <b>${D.daysRecorded}</b> วัน · streak <b>${D.streak}</b> วัน<br>
+      รวม ${(D.sats/1e8).toFixed(4)} BTC · ลงทุน $${fmt(Math.round(D.cents/100))} · เฉลี่ย $${D.avgCost.toLocaleString("en-US",{maximumFractionDigits:0})}</div>
+    <div class="btnrow"><button class="act ghost" onclick="closeSheet()">ปิด</button>
+      <button class="act" onclick="sheetRecord()">บันทึกวันนี้</button></div>`);
+}
+window.sheetCalendar=sheetCalendar; window.sheetRecord=sheetRecord; window.closeSheet=closeSheet;
+function sheetWorlds(){
+  const W=[["BTC","Homestead","0.0418 / 0.2 BTC",1],["ONDO","Business City","40,000",0],
+           ["BIO","Research Lab","200,000",0],["SOL","Technology City","40",0],
+           ["LINK","Network World","500",0],["AAVE","Lending Castle","30",0],
+           ["PENDLE","Harvest World","1,000",0],["CC","Financial Network","10,000",0]];
+  openSheet(`<h2>My Worlds</h2>
+    <p class="hint">MVP เปิดแค่โลกเดียว — โลกที่ 2 รอให้ core loop นิ่งก่อน</p>
+    <div class="wlist">${W.map(([t,n,g,open])=>`
+      <div class="wrow ${open?"":"lock"}"><span class="badge">${t}</span>
+        <span class="nm">${n}</span><span class="st">${open?g:"🔒 "+g}</span></div>`).join("")}</div>
+    <div class="btnrow"><button class="act ghost" onclick="closeSheet()">ปิด</button></div>`);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. INPUT + LOOP
+   ════════════════════════════════════════════════════════════════════ */
+const cv=document.getElementById("c"), ctx=cv.getContext("2d",{alpha:false});
+let SCALE=1;
+function relayout(){
+  cv.width=VW; cv.height=VH;
+  SCALE=Math.max(1,Math.floor(Math.min(window.innerWidth/VW,(window.innerHeight-18)/VH)));
+  cv.style.transform=`scale(${SCALE})`;
+  const st=document.getElementById("stage");
+  st.style.width=VW*SCALE+"px"; st.style.height=VH*SCALE+"px";
+}
+addEventListener("resize",relayout);
+addEventListener("keydown",e=>{KEY[e.key]=KEY[e.key.toLowerCase()]=true;
+  if(e.key===" "||e.key==="Enter"){const n=nearby(); if(n) showTalk(n.talk);}});
+addEventListener("keyup",  e=>{KEY[e.key]=KEY[e.key.toLowerCase()]=false;});
+
+function toLocal(ev){ const r=cv.getBoundingClientRect();
+  return {x:(ev.clientX-r.left)/SCALE, y:(ev.clientY-r.top)/SCALE}; }
+function hitBtn(p){ return BTNS.find(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h); }
+function down(ev){
+  if(sheetEl.classList.contains("open")) return;
+  const p=toLocal(ev.touches?ev.touches[0]:ev);
+  const b=hitBtn(p);
+  if(b){ ev.preventDefault();
+    if(b.id==="record")   sheetRecord();
+    if(b.id==="calendar") sheetCalendar(0);
+    if(b.id==="worlds")   sheetWorlds();
+    if(b.id==="talk"){ const n=nearby(); if(n) showTalk(n.talk); }
+    return; }
+  JOY.on=true; JOY.ox=p.x; JOY.oy=p.y; JOY.dx=0; JOY.dy=0; ev.preventDefault();
+}
+function move(ev){
+  if(!JOY.on) return;
+  const p=toLocal(ev.touches?ev.touches[0]:ev);
+  let dx=p.x-JOY.ox, dy=p.y-JOY.oy; const m=Math.hypot(dx,dy);
+  if(m>4){ const k=Math.min(1,m/26)/m; JOY.dx=dx*k; JOY.dy=dy*k; } else { JOY.dx=JOY.dy=0; }
+  ev.preventDefault();
+}
+function up(){ JOY.on=false; JOY.dx=JOY.dy=0; }
+cv.addEventListener("touchstart",down,{passive:false});
+cv.addEventListener("touchmove", move,{passive:false});
+cv.addEventListener("touchend",  up);
+cv.addEventListener("mousedown", down);
+addEventListener("mousemove", move);
+addEventListener("mouseup", up);
+
+load(); seenLoad(); recompute(); buildSolids();
+[...UN].forEach(id=>seen.add(id)); seenSave();       // don't spam on first open
+relayout();
+let last=performance.now(), t0=last;
+(function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  movePlayer(dt);
+  if(TOAST.t>0) TOAST.t-=dt;
+  if(TALK.t>0){ TALK.t-=dt; if(TALK.t<=0) hideTalk(); }
+  scene((now-t0)/1000, dt);
+  requestAnimationFrame(loop);
+})(last);
+</script>
+</body>
+</html>

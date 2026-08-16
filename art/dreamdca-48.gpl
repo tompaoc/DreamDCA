@@ -1,0 +1,52 @@
+GIMP Palette
+Name: DreamDCA-48
+Columns: 5
+#
+ 20  15  20	ink
+ 36  26  33	ink
+ 58  43  51	ink
+ 46  82  39	grass
+ 63 110  46	grass
+ 87 145  58	grass
+119 178  74	grass
+156 203  99	grass
+ 22  53  31	foliage
+ 32  80  44	foliage
+ 47 110  56	foliage
+ 71 140  66	foliage
+ 58  36  16	dirt
+ 87  52  24	dirt
+122  76  34	dirt
+156 106  52	dirt
+192 143  81	dirt
+ 44  42  46	stone
+ 71  69  80	stone
+106 102 114	stone
+154 150 160	stone
+ 59  33   9	wood
+ 91  51  17	wood
+126  74  27	wood
+163 104  43	wood
+198 143  69	wood
+ 14  46  82	water
+ 23  73 127	water
+ 36 112 180	water
+ 62 155 216	water
+140 211 238	water
+ 92  52   5	gold
+150  96  12	gold
+210 149  26	gold
+245 193  60	gold
+255 231 154	gold
+107  59  42	skin
+179 106  69	skin
+232 178 131	skin
+112  27  46	accent
+196  56  63	accent
+238 138  85	accent
+ 24  26  36	cloth
+ 47  55  79	cloth
+ 92 107 148	cloth
+178  63 156	bloom
+238 154 214	bloom
+255 244 194	bloom

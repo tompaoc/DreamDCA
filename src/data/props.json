@@ -1,0 +1,74 @@
+[
+  {
+    "_comment": "unlock names the milestone that grants this prop, for readability. Visibility at runtime is driven by worldState.visibleProps, which is derived from the same table — see WorldScene.applyWorldState.",
+    "id": "home",
+    "sprite": "prop_tent",
+    "x": 110,
+    "y": 44,
+    "anchorY": 174,
+    "footprint": { "x": 40, "y": 150, "w": 80, "h": 22 },
+    "unlock": null,
+    "interact": "enter_house",
+    "worldStage": 0
+  },
+  {
+    "id": "vault",
+    "sprite": "prop_vault",
+    "x": 282,
+    "y": 262,
+    "anchorY": 62,
+    "footprint": { "x": 4, "y": 44, "w": 56, "h": 18 },
+    "unlock": "first_stack",
+    "interact": "open_vault",
+    "worldStage": 0
+  },
+  {
+    "id": "sign_path",
+    "sprite": "prop_sign",
+    "x": 214,
+    "y": 236,
+    "anchorY": 31,
+    "footprint": { "x": 12, "y": 24, "w": 8, "h": 6 },
+    "unlock": "first_light",
+    "interact": "read_sign",
+    "worldStage": 0
+  },
+  {
+    "id": "lantern",
+    "sprite": "prop_lantern",
+    "x": 138,
+    "y": 226,
+    "anchorY": 31,
+    "footprint": { "x": 12, "y": 26, "w": 8, "h": 5 },
+    "unlock": "first_light",
+    "interact": null,
+    "worldStage": 0
+  },
+
+  { "id": "tree_1_trunk", "sprite": "prop_tree_trunk", "x": 24, "y": 296, "anchorY": 31,
+    "footprint": { "x": 6, "y": 20, "w": 20, "h": 11 }, "unlock": null, "interact": null, "worldStage": 0 },
+  { "id": "tree_1_canopy", "sprite": "prop_tree_canopy", "x": -8, "y": 238, "anchorY": 89,
+    "footprint": null, "unlock": null, "interact": null, "worldStage": 0 },
+
+  { "id": "tree_2_trunk", "sprite": "prop_tree_trunk", "x": 300, "y": 200, "anchorY": 31,
+    "footprint": { "x": 6, "y": 20, "w": 20, "h": 11 }, "unlock": null, "interact": null, "worldStage": 0 },
+  { "id": "tree_2_canopy", "sprite": "prop_tree_canopy", "x": 268, "y": 142, "anchorY": 89,
+    "footprint": null, "unlock": null, "interact": null, "worldStage": 0 },
+
+  { "id": "tree_3_trunk", "sprite": "prop_tree_trunk", "x": 16, "y": 150, "anchorY": 31,
+    "footprint": { "x": 6, "y": 20, "w": 20, "h": 11 }, "unlock": null, "interact": null, "worldStage": 0 },
+  { "id": "tree_3_canopy", "sprite": "prop_tree_canopy", "x": -16, "y": 92, "anchorY": 89,
+    "footprint": null, "unlock": null, "interact": null, "worldStage": 0 },
+
+  { "id": "tree_4_trunk", "sprite": "prop_tree_trunk", "x": 296, "y": 430, "anchorY": 31,
+    "footprint": { "x": 6, "y": 20, "w": 20, "h": 11 }, "unlock": null, "interact": null, "worldStage": 0 },
+  { "id": "tree_4_canopy", "sprite": "prop_tree_canopy", "x": 264, "y": 372, "anchorY": 89,
+    "footprint": null, "unlock": null, "interact": null, "worldStage": 0 },
+
+  { "id": "fence_0", "sprite": "prop_fence", "x": 246, "y": 486, "anchorY": 31,
+    "footprint": { "x": 0, "y": 22, "w": 32, "h": 8 }, "unlock": "steady_3", "interact": null, "worldStage": 0 },
+  { "id": "fence_1", "sprite": "prop_fence", "x": 278, "y": 486, "anchorY": 31,
+    "footprint": { "x": 0, "y": 22, "w": 32, "h": 8 }, "unlock": "steady_3", "interact": null, "worldStage": 0 },
+  { "id": "fence_2", "sprite": "prop_fence", "x": 310, "y": 486, "anchorY": 31,
+    "footprint": { "x": 0, "y": 22, "w": 32, "h": 8 }, "unlock": "steady_3", "interact": null, "worldStage": 0 }
+]

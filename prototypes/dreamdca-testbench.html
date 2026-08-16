@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dream DCA — Tile Size &amp; Resolution Test Bench</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#0b0a0c;color:#c7c2cc;
+    font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    -webkit-font-smoothing:antialiased;overscroll-behavior:none}
+  body{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 10px 24px}
+  h1{font-size:13px;font-weight:600;color:#F5C13C;letter-spacing:.06em;text-transform:uppercase}
+  .sub{font-size:11px;color:#6A6672;text-align:center;max-width:460px}
+  #stage{display:flex;align-items:center;justify-content:center;
+    background:#000;border:1px solid #241A21;flex:0 0 auto}
+  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;
+    transform-origin:top left}
+  .panel{width:100%;max-width:460px;display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .lbl{font-size:10px;color:#6A6672;text-transform:uppercase;letter-spacing:.08em;
+    width:100%;margin-top:2px}
+  button{font:inherit;font-size:11px;padding:6px 9px;cursor:pointer;color:#c7c2cc;
+    background:#1a1620;border:1px solid #3A2B33;border-radius:0;transition:none}
+  button:hover{background:#241A21}
+  button[aria-pressed="true"]{background:#5B3311;border-color:#C68F45;color:#FFE79A}
+  .readout{font-size:11px;color:#9A96A0;background:#141014;border:1px solid #241A21;
+    padding:8px 10px;white-space:pre-wrap;line-height:1.6}
+  .readout b{color:#77B24A;font-weight:600}
+  .warn{color:#EE8A55}
+  .note{font-size:10.5px;color:#6A6672;line-height:1.6}
+</style>
+</head>
+<body>
+
+<h1>Dream DCA · Grid Test Bench</h1>
+<p class="sub">Placeholder art, drawn procedurally from the locked 48-colour palette.
+Judge <em>scale and density</em>, not artistry. Open this on your actual phone.</p>
+
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div class="panel">
+  <div class="lbl">Tile size</div>
+  <div class="row" id="tileBtns"></div>
+
+  <div class="lbl">Internal resolution</div>
+  <div class="row" id="resBtns"></div>
+
+  <div class="lbl">Overlays</div>
+  <div class="row">
+    <button id="gridBtn" aria-pressed="false">Tile grid</button>
+    <button id="hudBtn"  aria-pressed="true">HUD</button>
+    <button id="dashBtn" aria-pressed="false">Dashboard HUD (bad)</button>
+  </div>
+
+  <div class="readout" id="out"></div>
+  <p class="note">
+    <b>How to read this.</b> At 32&nbsp;px tiles / 360×640 the cottage is 5 tiles wide and the whole
+    homestead fits one screen with no camera scrolling. At 48&nbsp;px you get 7.5 tiles across —
+    the farm stops reading as a place. At 16&nbsp;px the art direction's detail has nowhere to live.
+    <br><br>
+    Toggle <em>Dashboard HUD</em> to see the failure mode the brief is trying to avoid: same world,
+    rounded cards and a system font, and it instantly becomes a fintech app with a wallpaper.
+  </p>
+</div>
+
+<script>
+"use strict";
+
+/* ─── palette (dreamdca-48) ─────────────────────────────────────────── */
+const P = {
+  ink:    ["#140F14","#241A21","#3A2B33"],
+  grass:  ["#2E5227","#3F6E2E","#57913A","#77B24A","#9CCB63"],
+  foliage:["#16351F","#20502C","#2F6E38","#478C42"],
+  dirt:   ["#3A2410","#573418","#7A4C22","#9C6A34","#C08F51"],
+  stone:  ["#2C2A2E","#474550","#6A6672","#9A96A0"],
+  wood:   ["#3B2109","#5B3311","#7E4A1B","#A3682B","#C68F45"],
+  water:  ["#0E2E52","#17497F","#2470B4","#3E9BD8","#8CD3EE"],
+  gold:   ["#5C3405","#96600C","#D2951A","#F5C13C","#FFE79A"],
+  skin:   ["#6B3B2A","#B36A45","#E8B283"],
+  accent: ["#701B2E","#C4383F","#EE8A55"],
+  cloth:  ["#181A24","#2F374F","#5C6B94"],
+  bloom:  ["#B23F9C","#EE9AD6","#FFF4C2"],
+};
+
+/* ─── 5×7 bitmap font ───────────────────────────────────────────────── */
+const FONT = {
+"A":".###.,#...#,#...#,#####,#...#,#...#,#...#",
+"B":"####.,#...#,#...#,####.,#...#,#...#,####.",
+"C":".###.,#...#,#....,#....,#....,#...#,.###.",
+"D":"####.,#...#,#...#,#...#,#...#,#...#,####.",
+"E":"#####,#....,#....,####.,#....,#....,#####",
+"F":"#####,#....,#....,####.,#....,#....,#....",
+"G":".###.,#...#,#....,#.###,#...#,#...#,.###.",
+"H":"#...#,#...#,#...#,#####,#...#,#...#,#...#",
+"I":"#####,..#..,..#..,..#..,..#..,..#..,#####",
+"J":"..###,...#.,...#.,...#.,...#.,#..#.,.##..",
+"K":"#...#,#..#.,#.#..,##...,#.#..,#..#.,#...#",
+"L":"#....,#....,#....,#....,#....,#....,#####",
+"M":"#...#,##.##,#.#.#,#...#,#...#,#...#,#...#",
+"N":"#...#,##..#,#.#.#,#..##,#...#,#...#,#...#",
+"O":".###.,#...#,#...#,#...#,#...#,#...#,.###.",
+"P":"####.,#...#,#...#,####.,#....,#....,#....",
+"Q":".###.,#...#,#...#,#...#,#.#.#,#..#.,.##.#",
+"R":"####.,#...#,#...#,####.,#.#..,#..#.,#...#",
+"S":".####,#....,#....,.###.,....#,....#,####.",
+"T":"#####,..#..,..#..,..#..,..#..,..#..,..#..",
+"U":"#...#,#...#,#...#,#...#,#...#,#...#,.###.",
+"V":"#...#,#...#,#...#,#...#,#...#,.#.#.,..#..",
+"W":"#...#,#...#,#...#,#...#,#.#.#,##.##,#...#",
+"X":"#...#,#...#,.#.#.,..#..,.#.#.,#...#,#...#",
+"Y":"#...#,#...#,.#.#.,..#..,..#..,..#..,..#..",
+"Z":"#####,....#,...#.,..#..,.#...,#....,#####",
+"0":".###.,#...#,#..##,#.#.#,##..#,#...#,.###.",
+"1":"..#..,.##..,..#..,..#..,..#..,..#..,.###.",
+"2":".###.,#...#,....#,...#.,..#..,.#...,#####",
+"3":"#####,...#.,..#..,...#.,....#,#...#,.###.",
+"4":"...#.,..##.,.#.#.,#..#.,#####,...#.,...#.",
+"5":"#####,#....,####.,....#,....#,#...#,.###.",
+"6":"..##.,.#...,#....,####.,#...#,#...#,.###.",
+"7":"#####,....#,...#.,..#..,.#...,.#...,.#...",
+"8":".###.,#...#,#...#,.###.,#...#,#...#,.###.",
+"9":".###.,#...#,#...#,.####,....#,...#.,.##..",
+".":".....,.....,.....,.....,.....,.##..,.##..",
+"/":"....#,....#,...#.,..#..,.#...,#....,#....",
+"%":"##..#,##.#.,...#.,..#..,.#...,#.##.,..##.",
+":":".....,.##..,.##..,.....,.##..,.##..,.....",
+"-":".....,.....,.....,#####,.....,.....,.....",
+"B$":".#.#.,####.,#...#,####.,#...#,####.,.#.#.",  // Bitcoin glyph
+" ":".....,.....,.....,.....,.....,.....,.....",
+};
+
+/* ─── state ─────────────────────────────────────────────────────────── */
+let TILE = 32, VW = 360, VH = 640;
+let showGrid = false, showHud = true, dashMode = false;
+
+const MAP = [
+"GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG","GGGGGGGGGGG",
+"GGGGDDDGGGG","GGGGDDDGGGG","GGGGDDDGGGG","GGDDDDDDDGG","GGDDDDDDDGG",
+"GGGGDDDCCCC","GGGGDDDCCCC","GGGGDDDCCCC","GGGGSSSGGGG","GGGGSSSGGGG",
+"GGGGSSSGGGG","WWWWSSSWWWW","WWWWSSSWWWW","WWWWWWWWWWW","WWWWWWWWWWW"];
+
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d", { alpha:false });
+
+/* deterministic noise so terrain doesn't shimmer */
+function hash(x,y){ let n = x*374761393 + y*668265263; n = (n^(n>>13))*1274126177; return ((n^(n>>16))>>>0)/4294967296; }
+
+/* scaled rect: art authored in 32-unit space, drawn at TILE scale */
+let S = 1;
+function R(u,v,w,h,col){
+  const x=Math.round(u*S), y=Math.round(v*S);
+  ctx.fillStyle=col;
+  ctx.fillRect(x,y,Math.max(1,Math.round((u+w)*S)-x),Math.max(1,Math.round((v+h)*S)-y));
+}
+/* unscaled rect, for UI drawn in device-independent internal pixels */
+function U(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(x|0,y|0,w|0,h|0); }
+
+function text(str,x,y,col,sc){
+  sc = sc||1; let cx = x;
+  for (const ch of str.toUpperCase()){
+    const g = FONT[ch] || FONT[" "];
+    const rows = g.split(",");
+    for (let r=0;r<7;r++) for (let c=0;c<5;c++)
+      if (rows[r][c]==="#") U(cx+c*sc, y+r*sc, sc, sc, col);
+    cx += 6*sc;
+  }
+  return cx-x;
+}
+function textW(str,sc){ return str.length*6*(sc||1)-(sc||1); }
+
+/* ─── terrain ───────────────────────────────────────────────────────── */
+function drawTile(cx,cy,ch,t){
+  const u=cx*32, v=cy*32;
+  if (ch==="G"||ch==="C"){
+    R(u,v,32,32,P.grass[1]);
+    for(let i=0;i<30;i++){                              // mottling
+      const n=hash(cx*97+i,cy*131);
+      const px=u+((n*30)|0), py=v+((hash(i,cx*7+cy*13)*30)|0);
+      R(px,py,3,2, n>0.74?P.grass[2]:(n>0.42?P.grass[0]:P.grass[1]));
+    }
+    for(let i=0;i<7;i++){                               // tufts
+      const n=hash(cx*211+i,cy*307);
+      if(n<0.45) continue;
+      const px=u+((n*28)|0), py=v+((hash(i*5,cx+cy*3)*26)|0);
+      R(px+1,py,1,4,P.grass[3]); R(px,py+1,1,3,P.grass[2]);
+      R(px+2,py+1,1,3,P.grass[4]); R(px,py+4,3,1,P.grass[0]);
+    }
+    if (ch==="C"){                                      // tilled soil rows
+      R(u,v,32,32,P.dirt[1]);
+      for(let r=0;r<4;r++){ R(u,v+r*8,32,5,P.dirt[2]); R(u,v+r*8+5,32,2,P.dirt[0]); }
+      for(let r=0;r<4;r++)                              // leafy crops, not stripes
+        for(let k=0;k<3;k++){
+          const px=u+5+k*10, py=v+r*8+1, n=hash(cx*13+k,cy*17+r);
+          R(px,py-1,1,5,P.foliage[2]);
+          R(px-2,py+1,5,2,n>0.5?P.grass[2]:P.foliage[3]);
+          R(px-3,py+2,7,2,P.grass[1]);
+          R(px-2,py+4,5,1,P.foliage[1]);
+        }
+    }
+  } else if (ch==="D"){
+    R(u,v,32,32,P.dirt[2]);
+    for(let i=0;i<22;i++){
+      const n=hash(cx*53+i,cy*29);
+      R(u+((n*32)|0), v+((hash(i*3,cy*17+cx)*32)|0), 2,2, n>0.6?P.dirt[3]:P.dirt[1]);
+    }
+  } else if (ch==="S"){
+    R(u,v,32,32,P.dirt[1]);
+    for(let a=0;a<2;a++)for(let b=0;b<2;b++){
+      const n=hash(cx*11+a,cy*19+b);
+      R(u+a*16+2,v+b*16+2,12,12, n>0.5?P.stone[3]:P.stone[2]);
+      R(u+a*16+2,v+b*16+13,12,1,P.stone[1]);
+    }
+  } else if (ch==="W"){
+    R(u,v,32,32,P.water[1]);
+    const ph=(t*0.9+cx*0.6+cy*0.35);
+    for(let r=0;r<4;r++){
+      const off=Math.round(Math.sin(ph+r*1.3)*5);
+      R(u+8+off,v+r*8+2,10,2,P.water[2]);
+      R(u+2-off,v+r*8+5,7,1,P.water[3]);
+    }
+    R(u,v,32,1,P.water[0]);
+  }
+}
+
+/* irregular material transitions — this is what blob autotiling buys you,
+   and it is the main reason a pixel world stops reading as rectangles */
+function intrude(cx,cy,side,cols,depth,seed){
+  const u=cx*32, v=cy*32;
+  for(let i=0;i<32;i+=2){
+    const a=hash(cx*131+i+seed, cy*197+side*53);
+    const b=hash(cx*17+((i/8)|0)+seed, cy*23+side*7);   // low-frequency lobes
+    const n=a*0.45+b*0.55;
+    const d=Math.round(n*n*depth*1.6);
+    if(d<=0) continue;
+    const c = n>0.7?cols[1]:cols[0];
+    if(side===0) R(u+i, v,        2, d, c);   // top
+    if(side===1) R(u+32-d, v+i,   d, 2, c);   // right
+    if(side===2) R(u+i, v+32-d,   2, d, c);   // bottom
+    if(side===3) R(u,    v+i,     d, 2, c);   // left
+  }
+}
+function at(x,y){ return (MAP[y]&&MAP[y][x])||"G"; }
+
+function drawTerrain(t){
+  for(let y=0;y<MAP.length;y++)
+    for(let x=0;x<MAP[y].length;x++) drawTile(x,y,MAP[y][x],t);
+
+  const N=[[0,-1],[1,0],[0,1],[-1,0]];
+  for(let y=0;y<MAP.length;y++)for(let x=0;x<MAP[y].length;x++){
+    const me=at(x,y);
+    for(let s=0;s<4;s++){
+      const nb=at(x+N[s][0], y+N[s][1]);
+      if(nb===me) continue;
+      // grass overgrows paths and soil
+      if((me==="D"||me==="S"||me==="C") && nb==="G")
+        intrude(x,y,s,[P.grass[1],P.grass[2]],15,3);
+      // paths scuff into the grass
+      if(me==="G" && (nb==="D"||nb==="S"))
+        intrude(x,y,s,[P.dirt[2],P.dirt[1]],8,11);
+      if(me==="D" && nb==="G"){                      // tufts breaking into the path
+        for(let k=0;k<5;k++){
+          const n=hash(x*61+k+s*7, y*89+k*3);
+          if(n<0.5) continue;
+          const off=6+((n*13)|0);
+          const px = s===3?x*32+off : s===1?x*32+30-off : x*32+((hash(k,x+y)*28)|0);
+          const py = s===0?y*32+off : s===2?y*32+30-off : y*32+((hash(k*3,y+x)*28)|0);
+          R(px,py,3,2,P.grass[1]); R(px+1,py-2,1,3,P.grass[2]); R(px+3,py-1,1,2,P.grass[3]);
+        }
+      }
+    }
+  }
+  // shoreline foam where grass/stone meets water
+  for(let y=1;y<MAP.length;y++)
+    for(let x=0;x<MAP[y].length;x++)
+      if(MAP[y][x]==="W" && MAP[y-1][x]!=="W"){
+        const u=x*32, v=y*32, w=Math.round(Math.sin(t*1.4+x)*2);
+        R(u,v,32,3,P.water[4]); R(u+w+2,v+3,10,2,P.water[3]);
+      }
+}
+
+/* ─── props (authored in 32-unit space) ─────────────────────────────── */
+function cottage(u,v){
+  const [w0,w1,w2,w3,w4]=P.wood;
+  R(u+16,v+96,128,4,P.ink[0]);                       // ground shadow
+  R(u+18,v+56,124,44,w2);                            // walls
+  for(let i=0;i<7;i++) R(u+18,v+58+i*6,124,1,w1);    // planks
+  R(u+18,v+56,124,2,w3);
+  R(u+8,v+22,144,36,P.accent[0]);                    // roof
+  for(let r=0;r<5;r++){
+    R(u+8,v+24+r*7,144,4,r%2?"#8E2F31":P.accent[1]);
+    R(u+8,v+28+r*7,144,2,"#5A1522");
+  }
+  R(u+8,v+20,144,3,P.ink[1]);
+  R(u+68,v+8,24,16,P.stone[1]); R(u+66,v+4,28,5,P.stone[2]);  // chimney
+  R(u+70,v+62,20,20,P.water[1]);                     // round window
+  R(u+72,v+64,16,16,P.water[3]); R(u+78,v+62,3,20,w0); R(u+70,v+70,20,3,w0);
+  R(u+68,v+82,24,18,w0); R(u+70,v+84,20,16,w1);      // door
+  R(u+86,v+91,3,3,P.gold[3]);
+  R(u+30,v+66,20,20,P.ink[1]); R(u+32,v+68,16,16,P.gold[4]);  // lit windows
+  R(u+39,v+66,2,20,w0); R(u+30,v+75,20,2,w0);
+  R(u+110,v+66,20,20,P.ink[1]); R(u+112,v+68,16,16,P.gold[4]);
+  R(u+119,v+66,2,20,w0); R(u+110,v+75,20,2,w0);
+  R(u+60,v+100,40,6,P.stone[2]); R(u+60,v+106,40,4,P.stone[1]); // step
+}
+function vault(u,v){
+  R(u+2,v+58,60,4,P.ink[0]);
+  R(u+4,v+16,56,44,P.gold[1]); R(u+6,v+18,52,40,P.gold[2]);
+  R(u+4,v+12,56,6,P.gold[3]); R(u+4,v+10,56,2,P.ink[1]);
+  R(u+16,v+26,32,26,P.gold[0]); R(u+18,v+28,28,22,P.gold[3]);
+  R(u+28,v+34,10,10,P.gold[0]); R(u+30,v+30,2,18,P.gold[4]); R(u+24,v+38,18,2,P.gold[4]);
+  R(u+4,v+52,56,8,P.gold[0]);
+}
+function coop(u,v){
+  R(u+2,v+80,84,4,P.ink[0]);
+  R(u+8,v+40,72,42,P.wood[2]);
+  for(let i=0;i<6;i++) R(u+8,v+42+i*7,72,1,P.wood[1]);
+  R(u+2,v+16,88,26,P.water[1]);                       // blue roof
+  for(let r=0;r<3;r++) R(u+2,v+18+r*8,88,3,P.water[2]);
+  R(u+2,v+14,88,3,P.ink[1]);
+  R(u+30,v+52,28,30,P.ink[0]); R(u+32,v+54,24,28,"#2A1B0E");
+  R(u+70,v+30,6,12,P.wood[0]);
+}
+function tree(u,v,seed){
+  const s=hash(seed,7);
+  R(u+3,v+60,26,5,P.ink[0]);                              // shadow
+  R(u+11,v+38,10,26,P.wood[0]);                           // trunk
+  R(u+12,v+38,7,26,P.wood[1]); R(u+12,v+38,3,26,P.wood[2]);
+  R(u+9,v+58,14,5,P.wood[0]);                             // root flare
+  const rw=44+((s*10)|0), cx=u+16, cy=v+22;               // canopy centre
+  const ry=21, rx=rw/2;
+  // filled blob with an irregular, per-row jittered radius
+  for(let dy=-ry; dy<=ry; dy++){
+    const k=Math.sqrt(Math.max(0,1-(dy*dy)/(ry*ry)));
+    const j=(hash(seed*7, dy+40)-0.5)*5;
+    const w=Math.max(0, k*rx + j);
+    if(w<1) continue;
+    const shade = dy<-6 ? P.foliage[3] : (dy<4 ? P.foliage[2] : P.foliage[1]);
+    R(cx-w, cy+dy, w*2, 1, shade);
+    R(cx-w, cy+dy, 1.5, 1, P.foliage[0]);                 // right/left rim
+    R(cx+w-1.5, cy+dy, 1.5, 1, P.foliage[0]);
+  }
+  for(let i=0;i<26;i++){                                  // leaf clusters
+    const n=hash(seed*31+i,i*13), m=hash(i*17,seed*5);
+    const a=n*6.283, r=Math.sqrt(m)*0.82;
+    const px=cx+Math.cos(a)*r*rx, py=cy+Math.sin(a)*r*ry;
+    R(px-2,py-1,4,3, (py<cy-3)?P.foliage[3]:P.foliage[1]);
+    if(n>0.72) R(px-1,py-2,3,2,P.grass[3]);               // sun-catch highlight
+  }
+  R(cx-rx*0.55, cy+ry-7, rx*1.1, 4, P.foliage[0]);        // underside shadow
+}
+function bush(u,v,seed){
+  R(u+6,v+22,20,10,P.foliage[1]); R(u+9,v+18,14,12,P.foliage[2]);
+  for(let i=0;i<4;i++) R(u+9+i*4, v+19+((hash(seed+i,3)*5)|0), 3,3, P.foliage[3]);
+}
+function flowers(u,v,seed){
+  for(let i=0;i<4;i++){
+    const n=hash(seed*7+i,i*5);
+    const x=u+3+((n*26)|0), y=v+16+((hash(i,seed)*12)|0);
+    R(x,y,1,4,P.grass[2]);
+    R(x-1,y-2,3,3, n>0.66?P.bloom[1]:(n>0.33?P.gold[3]:P.bloom[2]));
+  }
+}
+function rock(u,v){
+  R(u+4,v+26,24,4,P.ink[0]);
+  R(u+6,v+14,20,14,P.stone[2]); R(u+8,v+12,14,6,P.stone[3]); R(u+6,v+24,20,4,P.stone[1]);
+}
+function fenceH(u,v){
+  R(u,v+16,32,3,P.wood[2]); R(u,v+23,32,3,P.wood[2]);
+  R(u+2,v+10,4,20,P.wood[1]); R(u+2,v+10,2,20,P.wood[3]);
+}
+function fenceV(u,v){
+  R(u+14,v,4,32,P.wood[2]); R(u+14,v,2,32,P.wood[3]);
+}
+function chest(u,v,t){
+  R(u+2,v+26,28,3,P.ink[0]);
+  R(u+4,v+14,24,14,P.wood[1]); R(u+4,v+8,24,8,P.wood[2]);
+  R(u+4,v+8,24,2,P.wood[3]); R(u+4,v+18,24,3,P.gold[1]);
+  R(u+14,v+17,4,6,P.gold[3]);
+  const sp=Math.sin(t*3)>0.4;
+  if(sp){ R(u+26,v+4,2,2,P.bloom[2]); R(u+25,v+5,4,1,P.gold[4]); R(u+27,v+3,1,4,P.gold[4]); }
+}
+function sign(u,v){
+  R(u+13,v+14,6,18,P.wood[1]);
+  R(u+2,v+2,28,16,P.wood[2]); R(u+2,v+2,28,2,P.wood[4]); R(u+2,v+16,28,2,P.wood[0]);
+  R(u+12,v+5,3,10,P.gold[2]); R(u+11,v+7,7,2,P.gold[3]); R(u+11,v+11,7,2,P.gold[3]);
+  R(u+13,v+3,2,14,P.gold[4]);
+}
+function bridge(u,v){
+  R(u-2,v-2,100,68,P.wood[0]);
+  for(let r=0;r<8;r++){
+    const n=hash(r,7);
+    R(u,v+r*8,96,6, n>0.6?P.wood[4]:P.wood[3]);
+    R(u,v+r*8+6,96,2,P.wood[1]);
+    R(u+4+((n*80)|0), v+r*8+2, 10,1, P.wood[2]);        // grain
+  }
+  R(u-2,v-2,5,68,P.wood[2]); R(u+93,v-2,5,68,P.wood[2]); // rails
+  for(let r=0;r<5;r++){ R(u-4,v+r*15,8,7,P.wood[1]); R(u+92,v+r*15,8,7,P.wood[1]); }
+}
+function smoke(u,v,t){
+  for(let i=0;i<4;i++){
+    const p=(t*0.6+i*0.25)%1;
+    const y=v-p*26, x=u+Math.sin(p*5+i)*5, s=2+p*4;
+    ctx.globalAlpha = 0.55*(1-p);
+    R(x,y,s,s,P.stone[3]);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ─── characters ────────────────────────────────────────────────────── */
+// frame: 0 contact-L, 1 passing, 2 contact-R, 3 passing
+function player(u,v,dir,frame){
+  const [c0,c1,c2]=P.cloth, [k0,k1,k2]=P.skin, ink=P.ink[0];
+  const bob = (frame===1||frame===3)?1:0;
+  const y = v+bob;
+  R(u+6,v+46,20,3,ink);                                  // shadow
+  R(u+8,y+2,16,10,"#2E1B10"); R(u+9,y+0,14,5,"#3E2716");  // hair
+  R(u+10,y+7,12,9,k1);                                    // face
+  if(dir!=="north"){
+    R(u+10,y+8,12,7,k2);
+    const ex = dir==="east"?14:(dir==="west"?8:10);
+    R(u+ex,y+10,2,2,ink); if(dir==="south") R(u+18,y+10,2,2,ink);
+  }
+  R(u+8,y+15,16,3,"#2E1B10");
+  R(u+7,y+17,18,16,c0);                                   // hoodie
+  R(u+7,y+17,18,2,c1); R(u+7,y+31,18,2,P.ink[1]);
+  if(dir==="south"){ R(u+14,y+21,4,7,P.gold[3]); R(u+13,y+23,6,2,P.gold[2]); R(u+13,y+26,6,2,P.gold[2]); }
+  R(u+5,y+19,3,11,c0); R(u+24,y+19,3,11,c0);              // arms
+  R(u+5,y+29,3,3,k1);  R(u+24,y+29,3,3,k1);
+  R(u+9,y+32,14,10,c1);                                   // legs
+  const swing = (frame===0)?2:(frame===2?-2:0);
+  R(u+9,y+34+Math.max(0,swing),6,8,c1);
+  R(u+17,y+34+Math.max(0,-swing),6,8,c1);
+  R(u+8,y+41+Math.max(0,swing),8,4,"#E8E6EA");            // sneakers
+  R(u+16,y+41+Math.max(0,-swing),8,4,"#E8E6EA");
+  R(u+8,y+44+Math.max(0,swing),8,2,P.ink[1]);
+  R(u+16,y+44+Math.max(0,-swing),8,2,P.ink[1]);
+}
+function chicken(u,v,t,seed){
+  const peck = (Math.sin(t*2+seed)>0.65)?4:0;
+  R(u+3,v+14,10,2,P.ink[0]);
+  R(u+3,v+5,10,9,"#F2EEE4"); R(u+4,v+6,8,7,"#FFFBF2");
+  R(u+9,v+1+peck,6,6,"#F2EEE4");
+  R(u+10,v+0+peck,4,2,P.accent[1]);
+  R(u+14,v+3+peck,2,2,P.gold[2]);
+  R(u+11,v+2+peck,1,1,P.ink[0]);
+  R(u+5,v+13,2,3,P.gold[2]); R(u+9,v+13,2,3,P.gold[2]);
+}
+function dog(u,v,t){
+  const wag=Math.sin(t*7)>0?1:-1;
+  R(u+2,v+17,20,3,P.ink[0]);
+  R(u+4,v+7,14,10,"#D2751E"); R(u+5,v+8,12,6,"#E8933A");
+  R(u+14,v+3,8,8,"#D2751E"); R(u+15,v+5,6,5,"#F2C08A");
+  R(u+15,v+1,3,4,"#B8600F"); R(u+19,v+1,3,4,"#B8600F");
+  R(u+20,v+6,2,2,P.ink[0]);
+  R(u+2,v+3-wag,4,6,"#E8933A");
+  R(u+5,v+16,3,4,"#F2C08A"); R(u+13,v+16,3,4,"#F2C08A");
+  R(u+14,v+10,7,2,P.foliage[2]); R(u+17,v+11,2,2,P.gold[3]);
+}
+function npc(u,v,col){
+  R(u+6,v+46,20,3,P.ink[0]);
+  R(u+8,v+2,16,10,"#4A2E18"); R(u+9,v+0,14,5,"#5E3D22");
+  R(u+10,v+7,12,9,P.skin[2]); R(u+13,v+10,2,2,P.ink[0]); R(u+18,v+10,2,2,P.ink[0]);
+  R(u+7,v+17,18,16,col); R(u+7,v+17,18,2,"#FFFFFF22");
+  R(u+5,v+19,3,11,col); R(u+24,v+15,3,13,col);
+  R(u+24,v+13,3,3,P.skin[2]); R(u+5,v+29,3,3,P.skin[2]);
+  R(u+9,v+32,14,10,P.cloth[1]);
+  R(u+8,v+42,8,4,"#E8E6EA"); R(u+16,v+42,8,4,"#E8E6EA");
+}
+
+/* ─── HUD ───────────────────────────────────────────────────────────── */
+function panel(x,y,w,h){
+  U(x,y,w,h,P.wood[0]);
+  U(x+2,y+2,w-4,h-4,P.wood[1]);
+  U(x+4,y+4,w-8,h-8,"#3A2412");
+  U(x+2,y+2,w-4,2,P.wood[3]);            // bevel light
+  U(x+2,y+2,2,h-4,P.wood[3]);
+  U(x+2,y+h-4,w-4,2,P.ink[0]);           // bevel dark
+  U(x+w-4,y+2,2,h-4,P.ink[0]);
+  U(x,y,2,2,P.ink[0]); U(x+w-2,y,2,2,P.ink[0]);
+  U(x,y+h-2,2,2,P.ink[0]); U(x+w-2,y+h-2,2,2,P.ink[0]);
+}
+function gauge(x,y,w,h,pct){
+  U(x,y,w,h,P.ink[0]); U(x+1,y+1,w-2,h-2,"#241505");
+  const seg=4, gw=(w-2)/seg;
+  const fill=(w-4)*Math.min(1,pct);
+  U(x+2,y+2,fill,h-4,P.grass[2]);
+  U(x+2,y+2,fill,2,P.grass[4]);
+  U(x+2,y+h-4,fill,2,P.grass[0]);
+  for(let i=1;i<seg;i++) U(x+Math.round(i*gw),y+1,1,h-2,P.wood[0]);
+}
+function rpgHud(t){
+  panel(6,6,168,26);
+  text("BTC HOMESTEAD",16,13,P.gold[4],2);
+  panel(VW-64,6,26,26); text("Y",VW-56,13,P.gold[3],2);
+  panel(VW-32,6,26,26); text("O",VW-24,13,P.stone[3],2);
+
+  panel(6,36,214,58);
+  text("B$",14,44,P.gold[3],2);
+  text("0.0418 / 0.2",28,44,P.gold[4],2);
+  gauge(14,60,196,12,0.209);
+  text("20.9%",14,78,P.grass[4],1);
+  text("HOUSE LV 3",VW-160,78,P.wood[4],1);
+
+  const by=VH-46;
+  const labels=["WORLDS","RECORD","CALENDAR"];
+  for(let i=0;i<3;i++){
+    const bw=Math.floor((VW-16)/3)-4, bx=8+i*(bw+6);
+    panel(bx,by,bw,38);
+    const s = bw>100?2:1;
+    text(labels[i], bx+Math.floor((bw-textW(labels[i],s))/2), by+15, i===1?P.gold[4]:P.wood[4], s);
+  }
+  if(Math.sin(t*1.6)>0.75){                    // milestone toast
+    panel(30,VH-120,VW-60,34);
+    text("MILESTONE  DOG JOINED", 44, VH-107, P.bloom[2],1);
+    text("0.03 BTC REACHED", 44, VH-97, P.gold[3],1);
+  }
+}
+function dashHud(){                            // the anti-pattern, for comparison
+  ctx.save();
+  const card=(x,y,w,h)=>{
+    ctx.fillStyle="rgba(255,255,255,0.92)";
+    ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.fill();
+    ctx.shadowColor="rgba(0,0,0,.3)"; ctx.shadowBlur=8;
+  };
+  card(10,10,VW-20,64);
+  ctx.shadowBlur=0; ctx.fillStyle="#111";
+  ctx.font="600 13px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.fillText("Total Balance",22,32);
+  ctx.font="700 22px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.fillText("0.0418 BTC",22,58);
+  ctx.fillStyle="#e6e6ea"; ctx.beginPath(); ctx.roundRect(22,64,VW-64,6,3); ctx.fill();
+  ctx.fillStyle="#f7931a"; ctx.beginPath(); ctx.roundRect(22,64,(VW-64)*0.209,6,3); ctx.fill();
+  card(10,VH-74,VW-20,64);
+  ctx.shadowBlur=0; ctx.fillStyle="#666";
+  ctx.font="500 12px -apple-system,Segoe UI,Roboto,sans-serif";
+  ["Worlds","Record","Calendar"].forEach((s,i)=>ctx.fillText(s,34+i*((VW-40)/3),VH-38));
+  ctx.restore();
+}
+
+/* ─── scene ─────────────────────────────────────────────────────────── */
+function drawScene(t){
+  ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle=P.ink[0]; ctx.fillRect(0,0,VW,VH);
+  drawTerrain(t);
+
+  // gather depth-sorted drawables (depth = ground-contact Y in art units)
+  const D=[];
+  const add=(y,fn)=>D.push({y,fn});
+  add(16*32+64, ()=>bridge(4*32, 16*32));
+  add(4*32+126, ()=>{ cottage(3*32, 2*32+16); smoke(3*32+76, 2*32+22, t); });
+  add(5*32+58,  ()=>vault(8*32-4, 4*32+2));
+  add(10*32+84, ()=>coop(0*32+4, 8*32));
+  for (const [tx,ty,sd] of [[0,0,1],[1,2,2],[9,0,3],[10,2,4],[0,12,5],[10,13,6],[9,16,7],[0,4,8]])
+    add(ty*32+66, ()=>tree(tx*32,ty*32,sd));
+  for (const [tx,ty,sd] of [[2,5,11],[8,6,12],[1,14,13],[9,12,14]]) add(ty*32+30, ()=>bush(tx*32,ty*32,sd));
+  for (const [tx,ty] of [[2,7],[8,13]]) add(ty*32+28, ()=>rock(tx*32,ty*32));
+  for (const [tx,ty,sd] of [[3,4,21],[8,9,22],[1,10,23],[9,14,24],[2,13,25]]) add(ty*32+28, ()=>flowers(tx*32,ty*32,sd));
+  for (let i=0;i<4;i++) add(10*32+26, ()=>fenceH((7+0)*32, (10+i>13?13:10+i)*32));
+  for (let i=0;i<3;i++){ const yy=10+i; add(yy*32+26, ()=>fenceV(7*32, yy*32)); }
+  add(9*32+28, ()=>sign(2*32+8, 9*32));
+  add(15*32+28, ()=>chest(1*32, 15*32, t));
+  add(12*32+28, ()=>chest(9*32+16, 12*32, t+1));
+
+  // entities
+  const walk = 5*32 + Math.round((Math.sin(t*0.55)*0.5+0.5)*7*32);
+  const frame = Math.floor(t*8)%4;
+  const dir = Math.cos(t*0.55)>0 ? "south":"north";
+  add(walk+48, ()=>player(5*32, walk-8, dir, frame));
+  add(9*32+46, ()=>npc(3*32-6, 9*32-2, P.accent[1]));
+  add(8*32+46, ()=>npc(7*32+8, 8*32-2, P.grass[2]));
+  add(11*32+16, ()=>chicken(1*32+6, 11*32, t, 1));
+  add(11*32+16, ()=>chicken(2*32+2, 11*32+4, t, 3));
+  add(12*32+18, ()=>chicken(0*32+18, 12*32, t, 5));
+  add(walk+56,  ()=>dog(6*32+10, walk+8, t));
+
+  D.sort((a,b)=>a.y-b.y).forEach(d=>d.fn());
+
+  if(showGrid){
+    ctx.strokeStyle="rgba(255,255,255,.16)"; ctx.lineWidth=1;
+    for(let x=0;x<=VW;x+=TILE){ctx.beginPath();ctx.moveTo(x+.5,0);ctx.lineTo(x+.5,VH);ctx.stroke();}
+    for(let y=0;y<=VH;y+=TILE){ctx.beginPath();ctx.moveTo(0,y+.5);ctx.lineTo(VW,y+.5);ctx.stroke();}
+  }
+  if(showHud){ dashMode ? dashHud() : rpgHud(t); }
+}
+
+/* ─── layout / scaling ──────────────────────────────────────────────── */
+function relayout(){
+  S = TILE/32;
+  cv.width=VW; cv.height=VH;
+  const availW = Math.min(window.innerWidth-24, 520);
+  const availH = window.innerHeight*0.62;
+  const scale = Math.max(1, Math.floor(Math.min(availW/VW, availH/VH)));
+  cv.style.transform=`scale(${scale})`;
+  const st=document.getElementById("stage");
+  st.style.width=(VW*scale)+"px"; st.style.height=(VH*scale)+"px";
+
+  const across=(VW/TILE), down=(VH/TILE);
+  const dpr=window.devicePixelRatio||1;
+  const cot=Math.round(160*S), ch=Math.round(48*S);
+  document.getElementById("out").innerHTML =
+`tile <b>${TILE}px</b>   internal <b>${VW}×${VH}</b>   css scale <b>${scale}×</b>
+viewport  ${across.toFixed(2)} × ${down.toFixed(2)} tiles
+cottage   ${cot}px wide (${(cot/VW*100).toFixed(0)}% of screen width)
+character ${Math.round(32*S)}×${ch}px
+device    ${window.innerWidth}×${window.innerHeight} css @ dpr ${dpr}  →  ${Math.round(window.innerWidth*dpr)}×${Math.round(window.innerHeight*dpr)} px
+${across<9?'<span class="warn">⚠ under 9 tiles across — the farm stops reading as a place</span>'
+ :across>14?'<span class="warn">⚠ over 14 tiles across — detail gets too small to read on a phone</span>'
+ :'<b>✓ good field of view for a one-screen homestead</b>'}`;
+}
+
+/* ─── controls ──────────────────────────────────────────────────────── */
+function mkBtns(host, items, isOn, onPick){
+  host.innerHTML="";
+  items.forEach(it=>{
+    const b=document.createElement("button");
+    b.textContent=it.label; b.setAttribute("aria-pressed", isOn(it)?"true":"false");
+    b.onclick=()=>{ onPick(it); syncBtns(); relayout(); };
+    host.appendChild(b);
+  });
+}
+const TILES=[{label:"16 px",v:16},{label:"24 px",v:24},{label:"32 px  ★",v:32},{label:"48 px",v:48}];
+const RES=[{label:"240×426",w:240,h:426},{label:"320×568",w:320,h:568},
+           {label:"360×640  ★",w:360,h:640},{label:"540×960",w:540,h:960}];
+function syncBtns(){
+  mkBtns(document.getElementById("tileBtns"),TILES,i=>i.v===TILE,i=>TILE=i.v);
+  mkBtns(document.getElementById("resBtns"),RES,i=>i.w===VW,i=>{VW=i.w;VH=i.h;});
+}
+syncBtns();
+const tog=(id,get,set)=>{const b=document.getElementById(id);
+  b.onclick=()=>{set(!get());b.setAttribute("aria-pressed",get()?"true":"false");};};
+tog("gridBtn",()=>showGrid,v=>showGrid=v);
+tog("hudBtn", ()=>showHud, v=>showHud=v);
+tog("dashBtn",()=>dashMode,v=>dashMode=v);
+
+addEventListener("resize",relayout);
+relayout();
+let t0=performance.now();
+(function loop(now){ drawScene((now-t0)/1000); requestAnimationFrame(loop); })(t0);
+</script>
+</body>
+</html>
