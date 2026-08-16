@@ -1,10 +1,12 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import type { Entry } from "./core/types";
+import { type UpdateHandle, initPwa } from "./pwa";
 import { useStore } from "./store/useStore";
 import { BackupSheet } from "./ui/BackupSheet";
 import { CalendarSheet } from "./ui/CalendarSheet";
 import { RecordSheet } from "./ui/RecordSheet";
 import { UnlockSummary } from "./ui/UnlockSummary";
+import { UpdateBanner } from "./ui/UpdateBanner";
 
 /**
  * Phaser is mounted only on the World screen (AUDIT §2), so it is also *loaded*
@@ -24,9 +26,13 @@ export default function App() {
   const load = useStore((s) => s.load);
   const stageLabel = useStore((s) => s.world.stageLabel);
   const [screen, setScreen] = useState<Screen>({ kind: "world" });
+  const [update, setUpdate] = useState<UpdateHandle | null>(null);
 
   useEffect(() => {
     void load();
+    // Registered after the initial ledger load is kicked off, not before: the
+    // ledger read must never race a service-worker install on first launch.
+    initPwa(setUpdate);
   }, [load]);
 
   const close = () => setScreen({ kind: "world" });
@@ -36,6 +42,8 @@ export default function App() {
       <Suspense fallback={<div className="boot" />}>
         <PhaserGame />
       </Suspense>
+
+      {update ? <UpdateBanner handle={update} onDismiss={() => setUpdate(null)} /> : null}
 
       {/* Thai lives in the HTML layer; the canvas HUD is ASCII bitmap only (L10). */}
       <div className="stage-strip">{ready ? stageLabel : "กำลังเปิดโลก…"}</div>

@@ -1,0 +1,56 @@
+name: Deploy Dream DCA to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy in flight — a second push mid-deploy should not race the
+# first onto Pages. Never cancel a deploy already in progress, only queued ones.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The pipeline this app is built on (L5) is exactly what a CI gate should
+      # verify before anything reaches a URL: derive/progression/backup logic,
+      # under all three timezones a real user could be in.
+      - run: npm run test:tz
+
+      - name: Validate art (palette + binary alpha)
+        run: |
+          pip install pillow
+          python scripts/validate_art.py
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

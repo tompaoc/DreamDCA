@@ -77,6 +77,33 @@ body {
 
 /* ── bottom chrome ───────────────────────────────────────────────────────── */
 
+.update-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  background: var(--wood-1);
+  border-bottom: 3px solid var(--gold-3);
+  font-size: 12.5px;
+}
+
+.update-banner span {
+  flex: 1;
+  color: var(--gold-4);
+}
+
+.update-banner .btn {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
 .stage-strip {
   position: absolute;
   left: 0;
