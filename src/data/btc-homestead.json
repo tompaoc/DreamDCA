@@ -1,0 +1,24 @@
+{
+  "note": "Scenes are DATA, not code. Each is a full painted background from ART_PROMPTS_BTC.md; the scene shown is the highest one whose minSats is met. Thresholds here are the same numbers baked into the prompt pack — do not renumber without regenerating art to match.",
+  "goalSats": 20000000,
+  "scenes": [
+    { "id": "bare_land", "minSats": 0, "image": "stage_00", "label": "ที่ดินเปล่า" },
+    { "id": "first_light", "minSats": 1, "image": "stage_01", "label": "จุดไฟดวงแรก" },
+    { "id": "cottage", "minSats": 400000, "image": "stage_02", "label": "บ้านเล็ก" },
+    { "id": "tilled_soil", "minSats": 1000000, "image": "stage_03", "label": "แปลงดินไถ" },
+    { "id": "crops", "minSats": 1600000, "image": "stage_04", "label": "สวนผัก" },
+    { "id": "coop", "minSats": 2400000, "image": "stage_05", "label": "เล้าไก่" },
+    { "id": "dog", "minSats": 3000000, "image": "stage_06", "label": "เพื่อนสี่ขา" },
+    { "id": "cottage2", "minSats": 4000000, "image": "stage_07", "label": "บ้านใหญ่" },
+    { "id": "stream", "minSats": 5000000, "image": "stage_08", "label": "ลำธาร" },
+    { "id": "bridge", "minSats": 6000000, "image": "stage_09", "label": "สะพานไม้" },
+    { "id": "chest1", "minSats": 7000000, "image": "stage_10", "label": "หีบสมบัติ" },
+    { "id": "cow", "minSats": 8400000, "image": "stage_11", "label": "วัวนม" },
+    { "id": "manor", "minSats": 10000000, "image": "stage_12", "label": "คฤหาสน์" },
+    { "id": "chest2", "minSats": 11600000, "image": "stage_13", "label": "หีบทองคำ" },
+    { "id": "well", "minSats": 13000000, "image": "stage_14", "label": "บ่อน้ำมงคล" },
+    { "id": "dock", "minSats": 15000000, "image": "stage_15", "label": "ท่าตกปลา" },
+    { "id": "villagers", "minSats": 17000000, "image": "stage_16", "label": "ชาวบ้านมาเยือน" },
+    { "id": "citadel", "minSats": 20000000, "image": "stage_17", "label": "Bitcoin Citadel" }
+  ]
+}

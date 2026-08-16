@@ -2,11 +2,12 @@ import { create } from "zustand";
 import { buildBackup, parseBackup, serializeBackup } from "../core/backup";
 import { todayKey } from "../core/date";
 import { derive } from "../core/derive";
-import { computeUnlocks, computeWorldState, newlyUnlocked } from "../core/progression";
-import type { Derived, Entry, Milestone, WorldState } from "../core/types";
+import { WORLDS, computeScene, computeWorldState, newlySeenScenes } from "../core/progression";
+import type { Derived, Entry, Scene, WorldState } from "../core/types";
 import { db, readMeta, writeMeta } from "../db/db";
 
-const LAST_SEEN_KEY = "lastSeenUnlocks";
+const LAST_SEEN_KEY = "lastSeenSceneId";
+const ACTIVE_WORLD = "btc"; // only world shipped in Phase 1 (HANDOFF §4.3)
 
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -17,57 +18,56 @@ type State = {
   ready: boolean;
   entries: Entry[];
   derived: Derived;
-  unlocks: Set<string>;
   world: WorldState;
-  lastSeenUnlocks: Set<string>;
-  /** Milestones crossed since the user last looked. Batched, never per-entry. */
-  pendingUnlocks: Milestone[];
+  lastSeenSceneId: string | null;
+  /** Scenes crossed since the user last looked. Batched, never per-entry. */
+  pendingScenes: Scene[];
 
   load: () => Promise<void>;
   addEntry: (e: Omit<Entry, "id">) => Promise<Entry>;
   updateEntry: (id: string, patch: Partial<Omit<Entry, "id">>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
-  acknowledgeUnlocks: () => Promise<void>;
+  acknowledgeScenes: () => Promise<void>;
   exportJson: () => string;
   importJson: (text: string, mode: "replace" | "merge") => Promise<number>;
 };
 
-const EMPTY = derive([], todayKey());
+const WORLD = WORLDS[ACTIVE_WORLD];
+const EMPTY_DERIVED = derive([], todayKey());
 
 export const useStore = create<State>((set, get) => {
   /** The whole pipeline, in one place. Called after every mutation (L5). */
-  const recompute = (entries: Entry[], lastSeen: Set<string>) => {
+  const recompute = (entries: Entry[], lastSeen: string | null) => {
     const d = derive(entries, todayKey());
-    const unlocks = computeUnlocks(d);
+    const world = computeWorldState(WORLD, d);
+    const scene = computeScene(WORLD, d.totalSats);
     return {
       entries,
       derived: d,
-      unlocks,
-      world: computeWorldState(d),
-      lastSeenUnlocks: lastSeen,
-      pendingUnlocks: newlyUnlocked(unlocks, lastSeen),
+      world,
+      lastSeenSceneId: lastSeen,
+      pendingScenes: newlySeenScenes(WORLD, scene, lastSeen),
     };
   };
 
   const persistAndRecompute = async (entries: Entry[]) => {
-    set(recompute(entries, get().lastSeenUnlocks));
+    set(recompute(entries, get().lastSeenSceneId));
   };
 
   return {
     ready: false,
     entries: [],
-    derived: EMPTY,
-    unlocks: new Set(),
-    world: computeWorldState(EMPTY),
-    lastSeenUnlocks: new Set(),
-    pendingUnlocks: [],
+    derived: EMPTY_DERIVED,
+    world: computeWorldState(WORLD, EMPTY_DERIVED),
+    lastSeenSceneId: null,
+    pendingScenes: [],
 
     async load() {
       const [entries, seen] = await Promise.all([
         db.entries.toArray(),
-        readMeta<string[]>(LAST_SEEN_KEY, []),
+        readMeta<string | null>(LAST_SEEN_KEY, null),
       ]);
-      set({ ...recompute(entries, new Set(seen)), ready: true });
+      set({ ...recompute(entries, seen), ready: true });
     },
 
     async addEntry(input) {
@@ -90,17 +90,15 @@ export const useStore = create<State>((set, get) => {
       await persistAndRecompute(get().entries.filter((e) => e.id !== id));
     },
 
-    async acknowledgeUnlocks() {
-      const seen = new Set(get().unlocks);
-      await writeMeta(LAST_SEEN_KEY, [...seen]);
-      set({ lastSeenUnlocks: seen, pendingUnlocks: [] });
+    async acknowledgeScenes() {
+      const sceneId = get().world.sceneId;
+      await writeMeta(LAST_SEEN_KEY, sceneId);
+      set({ lastSeenSceneId: sceneId, pendingScenes: [] });
     },
 
     exportJson() {
       const s = get();
-      return serializeBackup(
-        buildBackup(s.entries, [...s.lastSeenUnlocks], new Date().toISOString()),
-      );
+      return serializeBackup(buildBackup(s.entries, s.lastSeenSceneId, new Date().toISOString()));
     },
 
     async importJson(text, mode) {
@@ -109,9 +107,9 @@ export const useStore = create<State>((set, get) => {
         await db.transaction("rw", db.entries, db.meta, async () => {
           await db.entries.clear();
           await db.entries.bulkAdd(backup.entries);
-          await writeMeta(LAST_SEEN_KEY, backup.lastSeenUnlocks);
+          await writeMeta(LAST_SEEN_KEY, backup.lastSeenSceneId);
         });
-        set({ lastSeenUnlocks: new Set(backup.lastSeenUnlocks) });
+        set({ lastSeenSceneId: backup.lastSeenSceneId });
         await persistAndRecompute(backup.entries);
         return backup.entries.length;
       }

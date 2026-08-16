@@ -1,5 +1,6 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Entry } from "./core/types";
+import WorldView from "./game/WorldView";
 import { type UpdateHandle, initPwa } from "./pwa";
 import { useStore } from "./store/useStore";
 import { BackupSheet } from "./ui/BackupSheet";
@@ -7,13 +8,6 @@ import { CalendarSheet } from "./ui/CalendarSheet";
 import { RecordSheet } from "./ui/RecordSheet";
 import { UnlockSummary } from "./ui/UnlockSummary";
 import { UpdateBanner } from "./ui/UpdateBanner";
-
-/**
- * Phaser is mounted only on the World screen (AUDIT §2), so it is also *loaded*
- * only there. Keeping the ~1.5MB engine out of the entry chunk is what lets the
- * ledger, calendar and purchase form open fast on mobile data.
- */
-const PhaserGame = lazy(() => import("./game/PhaserGame"));
 
 type Screen =
   | { kind: "world" }
@@ -24,7 +18,7 @@ type Screen =
 export default function App() {
   const ready = useStore((s) => s.ready);
   const load = useStore((s) => s.load);
-  const stageLabel = useStore((s) => s.world.stageLabel);
+  const world = useStore((s) => s.world);
   const [screen, setScreen] = useState<Screen>({ kind: "world" });
   const [update, setUpdate] = useState<UpdateHandle | null>(null);
 
@@ -39,14 +33,12 @@ export default function App() {
 
   return (
     <div className="app">
-      <Suspense fallback={<div className="boot" />}>
-        <PhaserGame />
-      </Suspense>
+      <WorldView world={world} />
 
       {update ? <UpdateBanner handle={update} onDismiss={() => setUpdate(null)} /> : null}
 
       {/* Thai lives in the HTML layer; the canvas HUD is ASCII bitmap only (L10). */}
-      <div className="stage-strip">{ready ? stageLabel : "กำลังเปิดโลก…"}</div>
+      <div className="stage-strip">{ready ? world.label : "กำลังเปิดโลก…"}</div>
 
       <nav className="action-bar">
         <button type="button" className="ab" onClick={() => setScreen({ kind: "backup" })}>

@@ -8,14 +8,14 @@ const ENTRIES: Entry[] = [
   { id: "a", date: "2026-01-04", sats: 250_000, fiatCents: 15_000 },
 ];
 
-const round = (e: Entry[], seen: string[] = []) =>
+const round = (e: Entry[], seen: string | null = null) =>
   parseBackup(serializeBackup(buildBackup(e, seen, "2026-08-14T00:00:00.000Z")));
 
 describe("export / import — the single most important item before real use", () => {
   it("survives a full round trip byte-for-byte in meaning", () => {
-    const back = round(ENTRIES, ["first_light"]);
+    const back = round(ENTRIES, "first_light");
     expect(back.entries).toHaveLength(2);
-    expect(back.lastSeenUnlocks).toEqual(["first_light"]);
+    expect(back.lastSeenSceneId).toBe("first_light");
     // Derived state must be identical, which is the actual thing the user cares about.
     expect(derive(back.entries, "2026-08-14")).toEqual(derive(ENTRIES, "2026-08-14"));
   });
@@ -36,7 +36,7 @@ describe("export / import — the single most important item before real use", (
   });
 
   it("refuses a backup from a newer version rather than guessing", () => {
-    const b = buildBackup(ENTRIES, [], "x");
+    const b = buildBackup(ENTRIES, null, "x");
     const text = JSON.stringify({ ...b, version: 99 });
     expect(() => parseBackup(text)).toThrow(/ใหม่เกิน/);
   });
@@ -44,7 +44,7 @@ describe("export / import — the single most important item before real use", (
   it("rejects corrupted numbers instead of importing a wrong balance", () => {
     const bad = (patch: Record<string, unknown>) =>
       JSON.stringify({
-        ...buildBackup([{ ...ENTRIES[0], ...patch } as Entry], [], "x"),
+        ...buildBackup([{ ...ENTRIES[0], ...patch } as Entry], null, "x"),
       });
     expect(() => parseBackup(bad({ sats: 1.5 }))).toThrow(ImportError);
     expect(() => parseBackup(bad({ sats: -1 }))).toThrow(ImportError);
@@ -54,7 +54,19 @@ describe("export / import — the single most important item before real use", (
   });
 
   it("rejects duplicate ids, which would double-count a purchase", () => {
-    const text = JSON.stringify(buildBackup([ENTRIES[0], { ...ENTRIES[0] }], [], "x"));
+    const text = JSON.stringify(buildBackup([ENTRIES[0], { ...ENTRIES[0] }], null, "x"));
     expect(() => parseBackup(text)).toThrow(/ซ้ำ/);
+  });
+
+  it("treats a v1 backup (no scene concept) as unseen rather than guessing", () => {
+    const v1 = JSON.stringify({
+      format: "dreamdca.ledger",
+      version: 1,
+      exportedAt: "x",
+      world: "btc",
+      entries: [],
+      lastSeenUnlocks: ["first_light", "steady_3"],
+    });
+    expect(parseBackup(v1).lastSeenSceneId).toBeNull();
   });
 });

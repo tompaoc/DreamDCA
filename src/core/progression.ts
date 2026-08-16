@@ -1,93 +1,63 @@
-import progression from "../data/progression.json";
-import type { Derived, Grant, Milestone, Requirement, StageDef, WorldState } from "./types";
+import btcHomestead from "../data/btc-homestead.json";
+import type { Derived, Scene, WorldState } from "./types";
 
-export const STAGES = progression.stages as StageDef[];
-export const MILESTONES = progression.milestones as Milestone[];
+export type WorldDef = {
+  id: string;
+  goalSats: number;
+  scenes: Scene[];
+};
 
-/** Every requirement key must be met. An empty requirement is always met. */
-export function meets(d: Derived, r: Requirement): boolean {
-  if (r.sats !== undefined && d.totalSats < r.sats) return false;
-  if (r.fiatCents !== undefined && d.totalFiatCents < r.fiatCents) return false;
-  if (r.daysRecorded !== undefined && d.daysRecorded < r.daysRecorded) return false;
-  if (r.streak !== undefined && d.streak < r.streak) return false;
-  return true;
-}
+/** Only BTC ships in Phase 1 (HANDOFF.md §4.3) — the other seven worlds are future data files. */
+export const WORLDS: Record<string, WorldDef> = {
+  btc: { id: "btc", goalSats: btcHomestead.goalSats, scenes: btcHomestead.scenes as Scene[] },
+};
 
-/** derived -> unlocks. Pure. */
-export function computeUnlocks(d: Derived): Set<string> {
-  const out = new Set<string>();
-  for (const m of MILESTONES) if (meets(d, m.requires)) out.add(m.id);
-  return out;
-}
-
-/**
- * The highest stage whose requirement is met.
- *
- * Stages 1-3 key off *consistency* (days recorded) and only the last off coin —
- * see DECISIONS.md. That is what makes the world change on the very first
- * recorded purchase instead of months later.
- */
-export function computeStage(d: Derived): StageDef {
-  let best = STAGES[0];
-  for (const s of STAGES) if (meets(d, s.requires) && s.stage >= best.stage) best = s;
-  return best;
-}
-
-/** All grant tokens implied by a set of unlocked milestone ids. */
-export function grantsOf(unlocks: ReadonlySet<string>): Set<Grant> {
-  const out = new Set<Grant>();
-  for (const m of MILESTONES) if (unlocks.has(m.id)) for (const g of m.grants) out.add(g);
-  return out;
-}
-
-/**
- * unlocks -> worldState. Pure.
- *
- * Grant grammar (AUDIT §6):
- *   "prop.<id>"            make that prop visible
- *   "prop.<id>:<variant>"  swap that prop's sprite to `prop_<id>_<variant>`
- *   "entity.<kind>"        spawn that entity
- */
-export function computeWorldState(d: Derived): WorldState {
-  const stage = computeStage(d);
-  const grants = grantsOf(computeUnlocks(d));
-
-  const visibleProps = new Set<string>();
-  const propVariants: Record<string, string> = {};
-  const activeEntities = new Set<string>();
-
-  for (const g of grants) {
-    if (g.startsWith("entity.")) {
-      activeEntities.add(g.slice("entity.".length));
-      continue;
-    }
-    if (!g.startsWith("prop.")) continue;
-    const body = g.slice("prop.".length);
-    const [id, variant] = body.split(":");
-    visibleProps.add(id);
-    if (variant) propVariants[id] = `prop_${id}_${variant}`;
+/** The highest scene whose threshold is met. Scenes are authored in ascending minSats order. */
+export function computeScene(world: WorldDef, totalSats: number): Scene {
+  let current = world.scenes[0];
+  for (const s of world.scenes) {
+    if (totalSats < s.minSats) break;
+    current = s;
   }
+  return current;
+}
+
+/** derived -> worldState. Pure — no price input exists anywhere in this chain (L rule: never tied to market price). */
+export function computeWorldState(world: WorldDef, d: Derived): WorldState {
+  const scene = computeScene(world, d.totalSats);
+  const idx = world.scenes.findIndex((s) => s.id === scene.id);
+  const next = world.scenes[idx + 1] ?? null;
+  const progressToNext = next
+    ? clamp01((d.totalSats - scene.minSats) / (next.minSats - scene.minSats))
+    : 1;
 
   return {
-    stage: stage.stage,
-    stageLabel: stage.label,
-    homeSprite: stage.home,
-    visibleProps,
-    propVariants,
-    activeEntities,
+    world: world.id,
+    sceneId: scene.id,
+    image: scene.image,
+    label: scene.label,
+    goalSats: world.goalSats,
+    totalSats: d.totalSats,
+    progressToGoal: clamp01(d.totalSats / world.goalSats),
+    nextScene: next,
+    progressToNext,
   };
 }
 
+const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
+
 /**
- * Milestone notifications come from a DIFF, not an event (L5 / AUDIT §6).
- *
- * Backfilling six months at once must produce ONE summary, not twenty popups —
- * which is only possible if "new" means "in unlocks but not in lastSeenUnlocks",
- * computed after the recompute, rather than something fired during insertion.
+ * Scenes crossed since the user last looked, in order. This is a DIFF against
+ * `lastSeenSceneId`, not an event fired on insert — so backfilling six months
+ * of purchases at once yields one batched summary, not a popup per threshold.
  */
-export function newlyUnlocked(
-  unlocks: ReadonlySet<string>,
-  lastSeen: ReadonlySet<string>,
-): Milestone[] {
-  return MILESTONES.filter((m) => unlocks.has(m.id) && !lastSeen.has(m.id));
+export function newlySeenScenes(world: WorldDef, current: Scene, lastSeenSceneId: string | null): Scene[] {
+  if (lastSeenSceneId === current.id) return [];
+  // scenes[0] (minSats: 0) is the empty starting state, met before any entry
+  // exists — never worth announcing as a "grew" moment, so a fresh install
+  // (lastSeenSceneId === null) starts counting from index 1, not 0.
+  const lastIdx = lastSeenSceneId ? world.scenes.findIndex((s) => s.id === lastSeenSceneId) : 0;
+  const currentIdx = world.scenes.findIndex((s) => s.id === current.id);
+  if (currentIdx <= lastIdx) return [];
+  return world.scenes.slice(lastIdx + 1, currentIdx + 1);
 }

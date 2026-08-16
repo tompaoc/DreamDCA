@@ -43,40 +43,30 @@ export type Derived = {
   byDay: Record<DayKey, DayTotal>;
 };
 
-/** A grant token from the milestone table: "prop.bench", "prop.cottage:lv3", "entity.dog". */
-export type Grant = string;
-
-export type Requirement = {
-  sats?: number;
-  fiatCents?: number;
-  daysRecorded?: number;
-  streak?: number;
-};
-
-export type Milestone = {
+/**
+ * One painted background scene, keyed off accumulated sats (not streak, not
+ * days recorded — see DECISIONS.md: the owner accumulates in irregular lump
+ * sums, so "days recorded" would strand a real accumulator on the first scene
+ * for months). `image` is the basename under `public/art/<world>/`, no
+ * extension — the view picks the format.
+ */
+export type Scene = {
   id: string;
-  /** Thai, shown in the unlock summary. */
+  minSats: number;
+  image: string;
   label: string;
-  requires: Requirement;
-  grants: Grant[];
-};
-
-export type StageDef = {
-  stage: number;
-  label: string;
-  /** Sprite key for the home node at this stage — the BTC unlock ladder. */
-  home: string;
-  requires: Requirement;
 };
 
 export type WorldState = {
-  stage: number;
-  stageLabel: string;
-  homeSprite: string;
-  /** Prop ids that should be on screen. */
-  visibleProps: Set<string>;
-  /** Prop id -> sprite key, for props whose variant was swapped by a grant. */
-  propVariants: Record<string, string>;
-  /** Entity keys that should be spawned: "chicken", "dog", ... */
-  activeEntities: Set<string>;
+  world: string;
+  sceneId: string;
+  image: string;
+  label: string;
+  goalSats: number;
+  totalSats: number;
+  /** 0..1, total progress toward the world goal. */
+  progressToGoal: number;
+  nextScene: Scene | null;
+  /** 0..1, progress from the current scene's threshold toward the next one's. */
+  progressToNext: number;
 };

@@ -110,6 +110,13 @@ def main() -> int:
     files = sorted(glob.glob(os.path.join(args.dir, "**", "*.png"), recursive=True))
     # palette.png is the palette swatch sheet itself, not an asset.
     files = [f for f in files if os.path.basename(f) != "palette.png"]
+    # art/source/** holds full AI-painted scenes (docs/ART_PROMPTS_BTC.md) — hero-shot
+    # backgrounds, not composited pixel sprites. The palette-lock rule exists so many
+    # small sprites share one consistent look when tiled together; it does not apply
+    # to a single self-contained painting, and running these through indexed-colour
+    # reduction would only degrade them. Shipped copies live in public/art/**/*.webp,
+    # which this glob never sees (it only checks *.png under `--dir`, default art/).
+    files = [f for f in files if os.sep + "source" + os.sep not in f]
     if not files:
         print(f"no PNGs under {args.dir} yet — nothing to validate")
         return 0

@@ -51,28 +51,74 @@ body {
   background: var(--ink-0);
 }
 
-/* Shown while the Phaser chunk loads. Palette ink, so there is no white flash. */
-.boot {
+/* ── world: one full painted scene, not a tile/sprite engine ─────────────── */
+
+.world-view {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   background: var(--ink-0);
 }
 
-.world-host {
+/* A barely-perceptible whole-scene "breathing" zoom — the cheap, safe way to
+   make a static painting feel alive without per-object sprite work. -2% inset
+   gives the zoom headroom so it never reveals a hard edge. */
+.scene-stack {
   position: absolute;
-  inset: 0;
-  line-height: 0;
+  inset: -2%;
+  animation: scene-breathe 10s ease-in-out infinite;
 }
 
-/* The canvas backing store stays at the internal resolution; the CSS transform
-   in scale.ts supplies an integer magnification. Never let the browser resample. */
-.world-host canvas {
+@keyframes scene-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+.scene-img {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 32%;
+  display: block;
+}
+
+.scene-img-in {
+  z-index: 2;
+  animation: scene-fade-in 900ms ease both;
+}
+
+.scene-img-out {
+  z-index: 1;
+}
+
+@keyframes scene-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hud-canvas {
+  position: absolute;
+  top: env(safe-area-inset-top, 0px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  display: block;
+  z-index: 5;
+  pointer-events: none;
 }
 
 /* ── bottom chrome ───────────────────────────────────────────────────────── */

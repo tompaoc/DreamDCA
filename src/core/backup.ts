@@ -10,7 +10,7 @@ import type { Entry } from "./types";
  */
 
 export const BACKUP_FORMAT = "dreamdca.ledger";
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export type Backup = {
   format: typeof BACKUP_FORMAT;
@@ -18,14 +18,15 @@ export type Backup = {
   exportedAt: string;
   world: string;
   entries: Entry[];
-  lastSeenUnlocks: string[];
+  /** Highest scene id the user has already seen the unlock summary for, or null. */
+  lastSeenSceneId: string | null;
 };
 
 export class ImportError extends Error {}
 
 export function buildBackup(
   entries: readonly Entry[],
-  lastSeenUnlocks: readonly string[],
+  lastSeenSceneId: string | null,
   exportedAt: string,
   world = "btc",
 ): Backup {
@@ -35,7 +36,7 @@ export function buildBackup(
     exportedAt,
     world,
     entries: [...entries].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
-    lastSeenUnlocks: [...lastSeenUnlocks].sort(),
+    lastSeenSceneId,
   };
 }
 
@@ -89,9 +90,12 @@ export function parseBackup(text: string): Backup {
     };
   });
 
-  const lastSeenUnlocks = Array.isArray(o.lastSeenUnlocks)
-    ? o.lastSeenUnlocks.filter((x): x is string => typeof x === "string")
-    : [];
+  const lastSeenSceneId =
+    typeof o.lastSeenSceneId === "string"
+      ? o.lastSeenSceneId
+      : Array.isArray(o.lastSeenUnlocks) // v1 backups: no scene concept, treat as unseen
+        ? null
+        : null;
 
   return {
     format: BACKUP_FORMAT,
@@ -99,6 +103,6 @@ export function parseBackup(text: string): Backup {
     exportedAt: typeof o.exportedAt === "string" ? o.exportedAt : "",
     world: typeof o.world === "string" ? o.world : "btc",
     entries,
-    lastSeenUnlocks,
+    lastSeenSceneId,
   };
 }

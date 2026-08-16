@@ -18,6 +18,40 @@ repeated here. This file records the §4 OPEN items and anything decided since.
 
 ---
 
+## Architecture pivot — 2026-08-17
+
+Two of the resolutions above didn't survive contact with the owner's actual usage pattern and
+real art. Both are reversed here, explicitly, rather than silently overwritten.
+
+**§4.1/§4.2 reversed: accumulation replaces streak/days-recorded entirely.** The original
+resolution assumed a daily-habit user and gated early stages on `daysRecorded` specifically so the
+world would change on day one even though BTC accumulation looked flat. Talking through the
+owner's real behaviour — converting a lump sum to USDT and buying a large chunk in one sitting,
+irregularly, sometimes not for months — showed the `daysRecorded` gate would strand exactly that
+user on the first scene indefinitely, which is the opposite of the intended effect. Fix: every
+scene in `src/data/btc-homestead.json` is gated on **accumulated sats only** (`minSats`). Streak
+and `daysRecorded` remain in `derive.ts` — cheap to keep, might matter for a future habit-shaped
+world — but nothing in progression or the HUD reads them now. First purchase (any size) still
+changes the world immediately, because `minSats: 1` is the second scene; that emotional payload
+survives the reversal intact.
+
+**Rendering rebuilt around real art instead of the walkable tile engine.** AUDIT.md §12.2 asked
+"walkable or diorama?" and it was never firmly settled — Phase 1 built walkable by default,
+without that question being explicitly re-raised. The owner then produced real BTC Homestead art
+as full painted scenes (`docs/ART_PROMPTS_BTC.md`: one ChatGPT conversation, each image an
+incremental edit of the last accepted one, keeping camera/lighting/composition locked across all
+18 stages). That art is diorama-style — a self-contained hero shot per accumulation threshold, not
+32px tiles or composable sprites. Retrofitting it into `WorldScene.ts`'s tilemap system would have
+meant re-deriving tile/prop data from finished paintings for no benefit. `WorldScene.ts`,
+`placeholder.ts` and `scale.ts` are deleted; `src/game/WorldView.tsx` now crossfades the current
+scene's image and hosts a small, Phaser-independent HUD canvas. Phaser stays installed (L1 is
+still locked) but nothing currently imports it — dropped it from the bundle for free: **391KB →
+90KB gzip**.
+
+Both changes are reflected in `CLAUDE.md`; this section is the reasoning trail for why.
+
+---
+
 ## Sequencing — one deviation from the handoff, stated explicitly
 
 `HANDOFF.md` §9 lists Phase 1 as ten items in engine-first order. The section immediately after it
@@ -33,39 +67,39 @@ Nothing is cut from Phase 1 — only reordered.
 
 ## Verified, not assumed
 
-Checks run against the live build rather than reasoned about:
+Checks run against the live build rather than reasoned about (pre-pivot claims about the walkable
+tile engine — integer scaling, depth sorting, collision-follows-visibility — are no longer true
+statements about the shipped app and are removed rather than left stale; see the git history on
+this file if that era's numbers are ever needed).
 
-- **Integer scaling** — 25 unit tests, including a sweep of every viewport from 240×400 to
-  2400×2400; scale is integer everywhere and CSS size is always exactly `internal × scale`.
-- **Extend, never letterbox** — at 375×812 the canvas backing store measures 360×812 with
-  `transform: translate(7px,0) scale(1)`. The extra 172 rows are world, not black bar.
-- **Depth sorting** — with the player at y=314 (above the tree's ground contact at 327) it is drawn
-  *before* the canopy; at y=340 it is drawn *after*. One rule, no special-casing.
-- **Palette + binary alpha** — all 25 placeholder textures, including the baked 360×1400 terrain:
-  zero partial-alpha pixels, zero off-palette colours.
-- **Baseline stability** — the feet row is exactly 47 in all 4 walk frames of all 3 authored
-  directions, at exactly 32×48. Nothing bobs.
-- **Timezone** — the full suite passes under Australia/Sydney, UTC and America/Los_Angeles.
-- **Art CI gate** — `validate_art.py --self-test` fails a partial-alpha PNG and an off-palette PNG,
-  and passes a clean one.
+Post-pivot, against the real BTC Homestead art:
 
-Ledger layer, exercised against the running app:
-
-- **A purchase changes the world in the same session** — recording $9.34 @ $66,700 (the one real BTC
-  trade in the history) produced `0.00014003 BTC`, and the home node swapped `prop_tent` →
-  `prop_cottage_lv1` with the lantern and signpost appearing, without a scene reload.
-- **Backfill batches into ONE summary** — importing 40 consecutive backdated days in a single
-  operation produced **one** panel listing 4 milestones, not 40 popups. Already-acknowledged
-  milestones were correctly excluded from the diff.
-- **Collision follows visibility** — a locked fence is invisible *and* its static body is disabled,
-  so it cannot block a path the player is supposed to be able to walk.
-- **Export → replace → import reproduces state exactly.** The derived object is identical in
-  content; only `byDay` key insertion order differs in the raw JSON string, which is why the check
-  compares content rather than `JSON.stringify` output.
-- **Persistence survives reload** — stage, sprites and acknowledged unlocks all come back from
-  IndexedDB, and an acknowledged milestone does not re-announce itself.
+- **All 18 stage images + 2 creature sprites confirmed correctly ordered and mapped** by reading
+  every file back and checking its content against `docs/ART_PROMPTS_BTC.md`'s expected sequence
+  before renaming — catches a wrong save/skip before it becomes a silent off-by-one in the game.
+- **A real purchase changes the world in the same session, no reload.** Recording $9.34 @ $66,700
+  (the one real BTC trade in the ledger seed) produced `0.00014 BTC`, moved the world from
+  `bare_land` to `first_light` (0.07% of goal — matches the historical fact in HANDOFF §5 exactly),
+  and the DOM `<img>` swapped to `stage_01.webp` with no component remount.
+- **Scene index 0 is excluded from unlock announcements** — a real bug the test suite caught before
+  shipping (see Traps in `CLAUDE.md`), not one found by manual testing.
+- **A lump-sum jump batches into ONE summary.** Recording a single 0.12 BTC entry crossed 12 scene
+  thresholds (`cottage` through `chest2`) and produced exactly one unlock panel listing all 12, not
+  12 popups — the owner's real "buy it all at once" pattern, not a synthetic backfill test.
+- **Export → replace → import reproduces `worldState` exactly**, byte-different JSON aside
+  (key-insertion order only).
+- **Persistence survives reload** — scene, entries and `lastSeenSceneId` all restore from
+  IndexedDB; an already-acknowledged scene does not re-announce itself.
 - **Empty state is the shipped state** — after wiping the test data the world returns to
-  `ที่ดินเปล่า` with the tent, zero entries, and nothing unlocked. No invented sample data.
+  `bare_land` / `stage_00`, zero entries, no unlock panel. No invented sample data.
+- **Art CI gate correctly scoped** — `validate_art.py` no longer fails on the painted scenes
+  (which were never meant to be palette-locked); `--self-test` still fails a partial-alpha PNG and
+  an off-palette PNG and passes a clean one, so the gate isn't just disabled, it's aimed correctly.
+- **Bundle size**: dropping the unused Phaser import took the JS needed to render the world from
+  ~391KB gzip (46.9KB entry + 344KB Phaser chunk) to a single 90KB gzip bundle.
+- **Image weight**: 20 ChatGPT PNGs (51MB total, ~2.7MB each) converted to WebP q82 for
+  `public/art/btc/` — 6.3MB total, ~300-400KB per scene, and only the current scene is fetched at
+  any moment (lazy per `<img src>`, not preloaded as a set).
 
 ---
 
@@ -92,8 +126,11 @@ Actions build source rather than a `gh-pages` branch).
 - **Bitmap font** — no external face is chosen or licensed. The HUD currently uses an in-repo 5×7
   ASCII face (`src/game/font.ts`), which satisfies L10 and costs nothing; licensing a nicer face is
   still open.
-- **Not yet built from Phase 1**: animated water, chimney smoke, canopy sway, the idle NPC.
-- Tile size 32 and internal resolution 360×640 are confirmed in code and in tests, but the sign-off
-  checklist also asks for confirmation **on a real phone** via `prototypes/dreamdca-testbench.html`.
-  The dev server binds to `0.0.0.0`, so it is reachable from a phone on the same network.
-- Walkable-vs-diorama (`AUDIT.md` §12.2) is being built **walkable**, per the spec's own assumption.
+- **Creature sprites not composited.** `sprite_dog.webp` / `sprite_chicken.webp` exist and are
+  ready, but overlaying them on the baked-in painted dog/chicken needs each scene's exact pixel
+  position calibrated (stage_06 onward) — guessed placement risks a visible double-image or drift.
+- **Walkable-vs-diorama is now resolved as diorama** for BTC Homestead (see the pivot above).
+  Whether a *future* world (one with more room-to-room structure, say) goes walkable again is
+  still genuinely open — nothing forces every world to use the same render approach.
+- The old tile-size/resolution sign-off items (`AUDIT.md` §3, `dreamdca-testbench.html`) applied to
+  the deleted tile engine and no longer apply to full-bleed painted scenes.
