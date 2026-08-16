@@ -36,7 +36,7 @@ jobs:
 
       - name: Validate art (palette + binary alpha)
         run: |
-          pip install pillow
+          pip install pillow numpy
           python scripts/validate_art.py
 
       - run: npm run build
